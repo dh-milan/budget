@@ -1,0 +1,6 @@
+{
+  "name": "WealthFlow",
+  "description": "A world-class premium Personal Finance tracker with local Room caching, analytics charts, and a Gemini-powered AI Financial Assistant.",
+  "requestFramePermissions": [],
+  "majorCapabilities": ["MAJOR_CAPABILITY_SERVER_SIDE_GEMINI_API"]
+}

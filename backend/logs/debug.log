@@ -1,0 +1,19 @@
+INFO 2026-07-12 16:26:11,254 autoreload Watching for file changes with StatReloader
+INFO 2026-07-12 16:30:38,509 autoreload Watching for file changes with StatReloader
+INFO 2026-07-12 16:30:45,363 autoreload /home/milan/Desktop/wealthflow/backend/apps/ai_copilot/views.py changed, reloading.
+INFO 2026-07-12 16:30:45,370 autoreload /home/milan/Desktop/wealthflow/backend/apps/ai_copilot/views.py changed, reloading.
+INFO 2026-07-12 16:30:46,172 autoreload Watching for file changes with StatReloader
+INFO 2026-07-12 16:30:46,200 autoreload Watching for file changes with StatReloader
+INFO 2026-07-12 16:31:04,347 autoreload /home/milan/Desktop/wealthflow/backend/wealthflow/settings.py changed, reloading.
+INFO 2026-07-12 16:31:04,415 autoreload /home/milan/Desktop/wealthflow/backend/wealthflow/settings.py changed, reloading.
+INFO 2026-07-12 16:31:05,105 autoreload Watching for file changes with StatReloader
+INFO 2026-07-12 16:31:05,176 autoreload Watching for file changes with StatReloader
+INFO 2026-07-12 16:31:32,193 autoreload Watching for file changes with StatReloader
+INFO 2026-07-12 16:31:40,075 autoreload /home/milan/Desktop/wealthflow/backend/wealthflow/settings.py changed, reloading.
+INFO 2026-07-12 16:31:40,105 autoreload /home/milan/Desktop/wealthflow/backend/wealthflow/settings.py changed, reloading.
+INFO 2026-07-12 16:31:40,232 autoreload /home/milan/Desktop/wealthflow/backend/wealthflow/settings.py changed, reloading.
+INFO 2026-07-12 16:31:41,015 autoreload Watching for file changes with StatReloader
+INFO 2026-07-12 16:31:41,032 autoreload Watching for file changes with StatReloader
+INFO 2026-07-12 16:31:41,135 autoreload Watching for file changes with StatReloader
+INFO 2026-07-12 16:35:29,244 autoreload Watching for file changes with StatReloader
+INFO 2026-07-12 16:35:48,139 autoreload Watching for file changes with StatReloader
