@@ -449,3 +449,193 @@ class DebtSummaryView(APIView):
         
         serializer = DebtSummarySerializer(summary_data)
         return Response(serializer.data)
+
+
+class BudgetRecommendationsView(APIView):
+    """Generate budget recommendations based on spending patterns"""
+    permission_classes = [permissions.IsAuthenticated]
+    
+    def get(self, request):
+        # Get current month's spending
+        today = timezone.now()
+        month_start = today.replace(day=1, hour=0, minute=0, second=0, microsecond=0)
+        
+        # Get user's budgets
+        budgets = Budget.objects.filter(user=request.user, is_active=True, month_start=month_start)
+        
+        # Get actual spending by category for current month
+        from apps.ledger.models import Transaction
+        transactions = Transaction.objects.filter(
+            account__user=request.user,
+            timestamp__gte=month_start,
+            type='EXPENSE'
+        )
+        
+        actual_spending = {}
+        for tx in transactions:
+            cat = tx.category
+            actual_spending[cat] = actual_spending.get(cat, Decimal('0.00')) + tx.amount
+        
+        # Get historical spending (last 3 months)
+        three_months_ago = month_start - timedelta(days=90)
+        historical_transactions = Transaction.objects.filter(
+            account__user=request.user,
+            timestamp__gte=three_months_ago,
+            timestamp__lt=month_start,
+            type='EXPENSE'
+        )
+        
+        historical_spending = {}
+        for tx in historical_transactions:
+            cat = tx.category
+            historical_spending[cat] = historical_spending.get(cat, Decimal('0.00')) + tx.amount
+        
+        # Generate recommendations
+        recommendations = []
+        
+        # 1. Categories where user is overspending
+        for budget in budgets:
+            category = budget.category
+            spent = actual_spending.get(category, Decimal('0.00'))
+            budget_limit = budget.limit_amount
+            
+            if spent > budget_limit:
+                overspend_amount = spent - budget_limit
+                overspend_percent = (overspend_amount / budget_limit * 100) if budget_limit > 0 else 0
+                
+                recommendations.append({
+                    'type': 'OVERSPEND_ALERT',
+                    'category': category,
+                    'severity': 'HIGH' if overspend_percent > 50 else 'MEDIUM',
+                    'message': f"You've overspent on {category} by ${overspend_amount:.2f} ({overspend_percent:.1f}% over budget)",
+                    'current_spent': str(spent),
+                    'budget_limit': str(budget_limit),
+                    'suggested_action': f"Consider reducing {category} spending by ${overspend_amount:.2f} this month"
+                })
+        
+        # 2. Categories without budgets but with significant spending
+        for category, spent in actual_spending.items():
+            if category not in [b.category for b in budgets] and spent > 100:
+                recommendations.append({
+                    'type': 'NO_BUDGET_WARNING',
+                    'category': category,
+                    'severity': 'MEDIUM',
+                    'message': f"You've spent ${spent:.2f} on {category} without a budget",
+                    'current_spent': str(spent),
+                    'suggested_action': f"Consider setting a monthly budget of ${spent * Decimal('0.8'):.2f} for {category}"
+                })
+        
+        # 3. Savings opportunities based on historical data
+        for category, historical_avg in historical_spending.items():
+            current_spent = actual_spending.get(category, Decimal('0.00'))
+            monthly_avg = historical_avg / 3  # Average over 3 months
+            
+            if current_spent > monthly_avg * Decimal('1.2'):  # 20% over average
+                excess = current_spent - monthly_avg
+                recommendations.append({
+                    'type': 'SAVINGS_OPPORTUNITY',
+                    'category': category,
+                    'severity': 'LOW',
+                    'message': f"You're spending ${excess:.2f} more than usual on {category}",
+                    'current_spent': str(current_spent),
+                    'historical_average': str(monthly_avg),
+                    'suggested_action': f"Reducing to your usual ${monthly_avg:.2f} could save ${excess:.2f}"
+                })
+        
+        # 4. General recommendations
+        total_spent = sum(actual_spending.values())
+        if total_spent > 0:
+            # Find top spending category
+            top_category = max(actual_spending, key=actual_spending.get)
+            top_amount = actual_spending[top_category]
+            top_percent = (top_amount / total_spent * 100)
+            
+            if top_percent > 40:
+                recommendations.append({
+                    'type': 'CATEGORY_CONCENTRATION',
+                    'category': top_category,
+                    'severity': 'INFO',
+                    'message': f"{top_category} represents {top_percent:.1f}% of your spending",
+                    'current_spent': str(top_amount),
+                    'suggested_action': f"Review if this aligns with your financial priorities"
+                })
+        
+        # Sort by severity
+        severity_order = {'HIGH': 0, 'MEDIUM': 1, 'LOW': 2, 'INFO': 3}
+        recommendations.sort(key=lambda x: severity_order.get(x['severity'], 4))
+        
+        return Response({
+            'recommendation_count': len(recommendations),
+            'recommendations': recommendations,
+            'month': month_start.strftime('%Y-%m')
+        })
+
+
+class BudgetVsActualView(APIView):
+    """Get detailed budget vs actual spending comparison"""
+    permission_classes = [permissions.IsAuthenticated]
+    
+    def get(self, request):
+        month = request.query_params.get('month')
+        
+        if month:
+            year, month_num = month.split('-')
+            month_start = datetime(int(year), int(month_num), 1).date()
+        else:
+            month_start = timezone.now().date().replace(day=1)
+        
+        month_end = (month_start + timedelta(days=32)).replace(day=1) - timedelta(days=1)
+        
+        # Get budgets
+        budgets = Budget.objects.filter(user=request.user, is_active=True, month_start=month_start)
+        
+        # Get actual spending
+        from apps.ledger.models import Transaction
+        transactions = Transaction.objects.filter(
+            account__user=request.user,
+            timestamp__date__gte=month_start,
+            timestamp__date__lte=month_end,
+            type='EXPENSE'
+        )
+        
+        actual_by_category = {}
+        for tx in transactions:
+            cat = tx.category
+            actual_by_category[cat] = actual_by_category.get(cat, Decimal('0.00')) + tx.amount
+        
+        # Build comparison
+        comparison = []
+        for budget in budgets:
+            category = budget.category
+            actual = actual_by_category.get(category, Decimal('0.00'))
+            variance = budget.limit_amount - actual
+            variance_percent = (variance / budget.limit_amount * 100) if budget.limit_amount > 0 else 0
+            
+            comparison.append({
+                'category': category,
+                'budget': str(budget.limit_amount),
+                'actual': str(actual),
+                'variance': str(variance),
+                'variance_percent': str(variance_percent),
+                'status': 'OVER' if actual > budget.limit_amount else 'UNDER' if variance > 0 else 'EXACT'
+            })
+        
+        # Add categories with spending but no budget
+        for category, actual in actual_by_category.items():
+            if category not in [b.category for b in budgets]:
+                comparison.append({
+                    'category': category,
+                    'budget': '0.00',
+                    'actual': str(actual),
+                    'variance': str(-actual),
+                    'variance_percent': '-100',
+                    'status': 'NO_BUDGET'
+                })
+        
+        return Response({
+            'month': month_start.strftime('%Y-%m'),
+            'comparison': comparison,
+            'total_budget': str(sum(b.limit_amount for b in budgets)),
+            'total_actual': str(sum(actual_by_category.values())),
+            'categories_tracked': len(comparison)
+        })

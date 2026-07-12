@@ -14,6 +14,14 @@ urlpatterns = [
     path('api/v1/bills/', include('apps.bills.urls')),
     path('api/v1/payments/', include('apps.payments.urls')),
     path('api/v1/ai/', include('apps.ai_copilot.urls')),
+    path('api/v1/investments/', include('apps.investments.urls')),
+    path('api/v1/receipts/', include('apps.receipts.urls')),
+    path('api/v1/calendar/', include('apps.financial_calendar.urls')),
+    path('api/v1/family/', include('apps.family.urls')),
+    path('api/v1/split-expenses/', include('apps.split_expenses.urls')),
+    path('api/v1/documents/', include('apps.documents.urls')),
+    path('api/v1/security/', include('apps.security.urls')),
+    path('api/v1/analytics/', include('apps.analytics.urls')),
 ]
 
 # Serve media files in development

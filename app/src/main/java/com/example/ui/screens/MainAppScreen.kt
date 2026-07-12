@@ -1,6 +1,7 @@
 package com.example.ui.screens
 
 import android.widget.Toast
+import androidx.activity.compose.BackHandler
 import androidx.compose.animation.*
 import androidx.compose.foundation.BorderStroke
 import androidx.compose.foundation.Canvas
@@ -50,12 +51,22 @@ sealed class ScreenTab(val title: String, val icon: ImageVector) {
     object Transactions : ScreenTab("Ledger", Icons.Default.ReceiptLong)
     object Budgets : ScreenTab("Budgets", Icons.Default.PieChart)
     object Bills : ScreenTab("Bills & Debt", Icons.Default.CreditCard)
+    object Analytics : ScreenTab("Analytics", Icons.Default.Analytics)
+    object Profile : ScreenTab("Profile", Icons.Default.Person)
     object Assistant : ScreenTab("AI Advisor", Icons.AutoMirrored.Outlined.Chat)
 }
 
 @OptIn(ExperimentalMaterial3Api::class)
 @Composable
-fun MainAppScreen(viewModel: FinanceViewModel) {
+fun MainAppScreen(
+    viewModel: FinanceViewModel,
+    darkThemeEnabled: Boolean,
+    onDarkThemeEnabledChange: (Boolean) -> Unit,
+    dynamicColorEnabled: Boolean,
+    onDynamicColorEnabledChange: (Boolean) -> Unit,
+    accentThemeName: String,
+    onAccentThemeNameChange: (String) -> Unit
+) {
     val context = LocalContext.current
     val clipboardManager = LocalClipboardManager.current
 
@@ -66,6 +77,7 @@ fun MainAppScreen(viewModel: FinanceViewModel) {
 
     // States
     var currentTab by remember { mutableStateOf<ScreenTab>(ScreenTab.Dashboard) }
+    var showSettingsScreen by remember { mutableStateOf(false) }
     var showAddTxDialog by remember { mutableStateOf(false) }
     var showAddBudgetDialog by remember { mutableStateOf(false) }
     var showAddGoalDialog by remember { mutableStateOf(false) }
@@ -78,8 +90,12 @@ fun MainAppScreen(viewModel: FinanceViewModel) {
     val debts by viewModel.debts.collectAsStateWithLifecycle()
     val bills by viewModel.bills.collectAsStateWithLifecycle()
 
+    BackHandler(enabled = showSettingsScreen) {
+        showSettingsScreen = false
+    }
+
     Scaffold(
-        modifier = Modifier.fillMaxSize(),
+                        onNavigateToSettings = { showSettingsScreen = true },
         topBar = {
             CenterAlignedTopAppBar(
                 title = {
@@ -133,6 +149,8 @@ fun MainAppScreen(viewModel: FinanceViewModel) {
                     ScreenTab.Transactions,
                     ScreenTab.Budgets,
                     ScreenTab.Bills,
+                    ScreenTab.Analytics,
+                    ScreenTab.Profile,
                     ScreenTab.Assistant
                 )
                 tabs.forEach { tab ->
@@ -162,6 +180,7 @@ fun MainAppScreen(viewModel: FinanceViewModel) {
                             ScreenTab.Transactions -> showAddTxDialog = true
                             ScreenTab.Budgets -> showAddBudgetDialog = true
                             ScreenTab.Bills -> showAddBillDialog = true
+                            ScreenTab.Analytics -> {}
                             ScreenTab.Assistant -> {}
                         }
                     },
@@ -174,6 +193,7 @@ fun MainAppScreen(viewModel: FinanceViewModel) {
                                 ScreenTab.Dashboard, ScreenTab.Transactions -> "Add Tx"
                                 ScreenTab.Budgets -> "New Budget"
                                 ScreenTab.Bills -> "New Bill"
+                                ScreenTab.Analytics -> "Report"
                                 ScreenTab.Assistant -> "Ask AI"
                             }
                         )
@@ -189,8 +209,19 @@ fun MainAppScreen(viewModel: FinanceViewModel) {
                 .fillMaxSize()
                 .padding(innerPadding)
         ) {
-            Crossfade(targetState = currentTab, label = "TabTransition") { tab ->
-                when (tab) {
+            if (showSettingsScreen) {
+                ProductionSettingsScreen(
+                    onNavigateBack = { showSettingsScreen = false },
+                    darkThemeEnabled = darkThemeEnabled,
+                    onDarkThemeEnabledChange = onDarkThemeEnabledChange,
+                    dynamicColorEnabled = dynamicColorEnabled,
+                    onDynamicColorEnabledChange = onDynamicColorEnabledChange,
+                    accentThemeName = accentThemeName,
+                    onAccentThemeNameChange = onAccentThemeNameChange
+                )
+            } else {
+                Crossfade(targetState = currentTab, label = "TabTransition") { tab ->
+                    when (tab) {
                     ScreenTab.Dashboard -> DashboardScreenView(
                         transactions = transactions,
                         budgets = budgets,
@@ -221,6 +252,11 @@ fun MainAppScreen(viewModel: FinanceViewModel) {
                         onPayDebt = { id, amt -> viewModel.payDebt(id, amt) },
                         onAddDebtClick = { showAddDebtDialog = true },
                         onDeleteDebt = { viewModel.deleteDebt(it) }
+                    )
+                    ScreenTab.Analytics -> AnalyticsScreenView()
+                    ScreenTab.Profile -> ProfileScreen(
+                        onNavigateToSettings = { /* TODO: Navigate to settings */ },
+                        onLogout = { /* TODO: Handle logout */ }
                     )
                     ScreenTab.Assistant -> AssistantScreenView(viewModel)
                 }
@@ -291,15 +327,18 @@ fun DashboardScreenView(
     onAddGoalClick: () -> Unit
 ) {
     val totalIncome = transactions.filter { it.type == "INCOME" }.sumOf { it.amount }
-    val totalExpense = transactions.filter { it.type == "EXPENSE" }.sumOf { it.amount }
+                        onNavigateToSettings = { showSettingsScreen = true },
     val netWorth = totalIncome - totalExpense
 
     LazyColumn(
+                }
+            }
+        }
+    }
+
+    BackHandler(enabled = showSettingsScreen) {
+        showSettingsScreen = false
         modifier = Modifier
-            .fillMaxSize()
-            .padding(16.dp),
-        verticalArrangement = Arrangement.spacedBy(16.dp)
-    ) {
         // Premium Greeting Header Item (Bento Style)
         item {
             Row(

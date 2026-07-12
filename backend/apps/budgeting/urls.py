@@ -9,6 +9,8 @@ from .views import (
     BudgetSummaryView,
     SavingsSummaryView,
     DebtSummaryView,
+    BudgetRecommendationsView,
+    BudgetVsActualView,
 )
 
 urlpatterns = [
@@ -16,6 +18,8 @@ urlpatterns = [
     path('budgets/', BudgetListView.as_view(), name='budget-list'),
     path('budgets/<uuid:budget_id>/', BudgetDetailView.as_view(), name='budget-detail'),
     path('budgets/summary/', BudgetSummaryView.as_view(), name='budget-summary'),
+    path('budgets/vs-actual/', BudgetVsActualView.as_view(), name='budget-vs-actual'),
+    path('budgets/recommendations/', BudgetRecommendationsView.as_view(), name='budget-recommendations'),
     
     # Savings goals endpoints
     path('savings-goals/', SavingsGoalListView.as_view(), name='savings-goal-list'),

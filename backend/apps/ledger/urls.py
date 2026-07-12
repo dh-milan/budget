@@ -8,6 +8,9 @@ from .views import (
     TransactionSummaryView,
     BulkTransactionCreateView,
     AttachmentUploadView,
+    NetWorthView,
+    CashFlowReportView,
+    TransactionSearchView,
 )
 
 urlpatterns = [
@@ -20,10 +23,15 @@ urlpatterns = [
     path('transactions/<uuid:transaction_id>/', TransactionDetailView.as_view(), name='transaction-detail'),
     path('transactions/bulk/', BulkTransactionCreateView.as_view(), name='transaction-bulk-create'),
     path('transactions/summary/', TransactionSummaryView.as_view(), name='transaction-summary'),
+    path('transactions/search/', TransactionSearchView.as_view(), name='transaction-search'),
     
     # Category endpoints
     path('categories/', CategoryListView.as_view(), name='category-list'),
     
     # Attachment endpoints
     path('transactions/<uuid:transaction_id>/attachments/', AttachmentUploadView.as_view(), name='attachment-upload'),
+    
+    # Analytics endpoints
+    path('net-worth/', NetWorthView.as_view(), name='net-worth'),
+    path('cash-flow/', CashFlowReportView.as_view(), name='cash-flow'),
 ]

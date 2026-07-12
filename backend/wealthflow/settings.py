@@ -34,6 +34,14 @@ INSTALLED_APPS = [
     'apps.bills',
     'apps.payments',
     'apps.ai_copilot',
+    'apps.investments',
+    'apps.receipts',
+    'apps.financial_calendar',
+    'apps.family',
+    'apps.split_expenses',
+    'apps.documents',
+    'apps.security',
+    'apps.analytics',
 ]
 
 MIDDLEWARE = [

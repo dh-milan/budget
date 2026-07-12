@@ -1,0 +1,1 @@
+default_app_config = 'apps.split_expenses.apps.SplitExpensesConfig'

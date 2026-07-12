@@ -8,6 +8,7 @@ from .views import (
     AIUsageSummaryView,
     FinancialAnalysisView,
     NaturalLanguageSearchView,
+    ReceiptUploadView,
 )
 
 urlpatterns = [
@@ -28,4 +29,7 @@ urlpatterns = [
     
     # Natural Language Search
     path('search/', NaturalLanguageSearchView.as_view(), name='natural-language-search'),
+    
+    # Receipt OCR
+    path('receipt/upload/', ReceiptUploadView.as_view(), name='receipt-upload'),
 ]

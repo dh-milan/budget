@@ -1,3 +1,4 @@
+import uuid
 import requests
 import json
 from django.conf import settings
@@ -6,7 +7,7 @@ from django.db.models import Sum, Count, F
 from rest_framework.views import APIView
 from rest_framework.response import Response
 from rest_framework import status, permissions
-from datetime import datetime, timedelta
+from datetime import datetime, timedelta, time
 from decimal import Decimal
 
 from .models import AIConversation, AIMessage, AIInsight, AIUsageLog
@@ -19,6 +20,7 @@ from .serializers import (
 )
 from apps.authentication.models import AuditLog
 from apps.ledger.models import Transaction, Account
+from apps.ledger.serializers import TransactionSerializer
 from apps.budgeting.models import Budget, SavingsGoal, Debt
 from apps.bills.models import Bill
 
@@ -99,11 +101,15 @@ class AIChatView(APIView):
             # Generate insights if needed
             insights = self.generate_insights(request.user, message_text, ai_response_text)
             
+            # Generate suggested follow-up questions
+            suggested_questions = self.generate_suggested_questions(message_text, ai_response_text, financial_context)
+            
             response_data = {
                 'conversation_id': conversation.id,
                 'message': AIMessageSerializer(user_message).data,
                 'response': AIMessageSerializer(ai_message).data,
-                'insights': AIInsightSerializer(insights, many=True).data if insights else []
+                'insights': AIInsightSerializer(insights, many=True).data if insights else [],
+                'suggested_questions': suggested_questions
             }
             
             return Response(response_data, status=status.HTTP_200_OK)
@@ -286,42 +292,148 @@ Recent Transactions:
         ai_text = response_json['candidates'][0]['content']['parts'][0]['text']
         return ai_text
     
-    def generate_insights(self, user, user_message, ai_response):
-        """Generate AI insights based on the conversation"""
-        insights = []
-        
-        # Simple insight generation based on keywords
+    def generate_suggested_questions(self, user_message, ai_response, financial_context):
+        """Generate suggested follow-up questions based on conversation"""
+        suggestions = []
         message_lower = user_message.lower()
         
-        if 'budget' in message_lower and 'over' in message_lower:
-            # Check for budget overruns
-            over_budgets = Budget.objects.filter(
-                user=user,
-                is_active=True,
-                spent_amount__gt=F('limit_amount')
-            )
-            if over_budgets.exists():
-                insights.append(AIInsight(
-                    user=user,
-                    insight_type='BUDGET_ALERT',
-                    title='Budget Overrun Detected',
-                    description=f'You have {over_budgets.count()} budget(s) exceeding their limits.',
-                    priority=8
-                ))
+        # Context-aware suggestions
+        if 'budget' in message_lower:
+            suggestions.extend([
+                "How can I reduce my spending?",
+                "Which budget category am I overspending in?",
+                "Suggest ways to save money this month"
+            ])
+        elif 'save' in message_lower or 'saving' in message_lower:
+            suggestions.extend([
+                "What's my current savings rate?",
+                "How much should I save for retirement?",
+                "Show me my progress towards goals"
+            ])
+        elif 'invest' in message_lower:
+            suggestions.extend([
+                "How should I diversify my portfolio?",
+                "What's my investment performance?",
+                "Should I pay off debt or invest?"
+            ])
+        elif 'debt' in message_lower:
+            suggestions.extend([
+                "What's the best way to pay off my debt?",
+                "Should I use the avalanche or snowball method?",
+                "How much extra should I pay towards debt?"
+            ])
+        else:
+            # Generic suggestions
+            suggestions = [
+                "Analyze my spending patterns",
+                "How am I doing financially?",
+                "What are my biggest expenses?"
+            ]
         
-        if 'subscription' in message_lower:
-            # Detect potential subscriptions
-            recurring_transactions = Transaction.objects.filter(
-                account__user=user,
-                is_recurring=True
-            )
-            if recurring_transactions.exists():
+        # Return top 3 suggestions
+        return suggestions[:3]
+    
+    def generate_insights(self, user, user_message, ai_response):
+        """Generate AI insights based on the conversation and user data"""
+        insights = []
+        
+        # Check for budget overruns
+        over_budgets = Budget.objects.filter(
+            user=user,
+            is_active=True,
+            spent_amount__gt=F('limit_amount')
+        )
+        if over_budgets.exists():
+            insights.append(AIInsight(
+                user=user,
+                insight_type='BUDGET_ALERT',
+                title='Budget Overrun Detected',
+                description=f'You have {over_budgets.count()} budget(s) exceeding their limits. Review your spending to get back on track.',
+                priority=8,
+                action_url='/budgets'
+            ))
+        
+        # Detect potential subscriptions
+        recurring_transactions = Transaction.objects.filter(
+            account__user=user,
+            is_recurring=True
+        )
+        if recurring_transactions.exists():
+            total_subscription_cost = sum(tx.amount for tx in recurring_transactions)
+            insights.append(AIInsight(
+                user=user,
+                insight_type='SUBSCRIPTION_DETECTED',
+                title='Recurring Subscriptions Found',
+                description=f'You have {recurring_transactions.count()} recurring transactions totaling ${total_subscription_cost:.2f}/month. Review if all are needed.',
+                priority=5,
+                action_url='/transactions?filter=recurring'
+            ))
+        
+        # Detect duplicate charges
+        from datetime import timedelta
+        recent_transactions = Transaction.objects.filter(
+            account__user=user,
+            timestamp__gte=timezone.now() - timedelta(days=30)
+        )
+        
+        # Group by title and amount to find potential duplicates
+        from django.db.models import Count
+        duplicates = recent_transactions.values('title', 'amount').annotate(
+            count=Count('id')
+        ).filter(count__gt=1)
+        
+        if duplicates.exists():
+            insights.append(AIInsight(
+                user=user,
+                insight_type='DUPLICATE_CHARGE',
+                title='Potential Duplicate Charges Detected',
+                description=f'Found {duplicates.count()} potential duplicate transaction(s). Review your recent transactions.',
+                priority=7,
+                action_url='/transactions'
+            ))
+        
+        # Calculate financial health score
+        health_score = self.calculate_financial_health_score(user)
+        if health_score < 60:
+            insights.append(AIInsight(
+                user=user,
+                insight_type='FINANCIAL_HEALTH',
+                title='Financial Health Score Below Average',
+                description=f'Your financial health score is {health_score}/100. Focus on reducing debt and increasing savings.',
+                priority=6,
+                metadata={'score': health_score}
+            ))
+        
+        # Check for upcoming bills
+        upcoming_bills = Bill.objects.filter(
+            user=user,
+            is_active=True,
+            is_paid=False,
+            due_date__gte=timezone.now().date(),
+            due_date__lte=timezone.now().date() + timedelta(days=7)
+        )
+        if upcoming_bills.exists():
+            total_due = sum(bill.amount for bill in upcoming_bills)
+            insights.append(AIInsight(
+                user=user,
+                insight_type='BILL_REMINDER',
+                title='Upcoming Bills Due Soon',
+                description=f'You have {upcoming_bills.count()} bill(s) due in the next 7 days totaling ${total_due:.2f}.',
+                priority=9,
+                action_url='/bills'
+            ))
+        
+        # Savings opportunities
+        if financial_context.get('total_income', 0) > 0:
+            savings_rate = (financial_context.get('total_income', 0) - financial_context.get('total_expenses', 0)) / financial_context.get('total_income', 1)
+            if savings_rate < 0.2:
                 insights.append(AIInsight(
                     user=user,
-                    insight_type='SUBSCRIPTION_DETECTED',
-                    title='Recurring Subscriptions Found',
-                    description=f'You have {recurring_transactions.count()} recurring transactions.',
-                    priority=5
+                    insight_type='SAVINGS_OPPORTUNITY',
+                    title='Low Savings Rate Detected',
+                    description=f'Your current savings rate is {savings_rate*100:.1f}%. Financial experts recommend saving at least 20% of your income.',
+                    priority=6,
+                    action_url='/budgets'
                 ))
         
         # Save insights
@@ -329,6 +441,50 @@ Recent Transactions:
             insight.save()
         
         return insights
+    
+    def calculate_financial_health_score(self, user):
+        """Calculate overall financial health score (0-100)"""
+        score = 50  # Base score
+        
+        # Factor 1: Savings rate (max +20)
+        total_income = Transaction.objects.filter(
+            account__user=user,
+            type='INCOME',
+            timestamp__gte=timezone.now() - timedelta(days=30)
+        ).aggregate(total=Sum('amount'))['total'] or Decimal('0')
+        
+        total_expenses = Transaction.objects.filter(
+            account__user=user,
+            type='EXPENSE',
+            timestamp__gte=timezone.now() - timedelta(days=30)
+        ).aggregate(total=Sum('amount'))['total'] or Decimal('0')
+        
+        if total_income > 0:
+            savings_rate = (total_income - total_expenses) / total_income
+            score += min(20, int(savings_rate * 100))
+        
+        # Factor 2: Budget adherence (max +15)
+        budgets = Budget.objects.filter(user=user, is_active=True)
+        if budgets.exists():
+            on_track = sum(1 for b in budgets if b.percentage_used < 80)
+            score += int((on_track / len(budgets)) * 15)
+        
+        # Factor 3: Debt management (max +15)
+        debts = Debt.objects.filter(user=user, is_active=True)
+        if not debts.exists():
+            score += 15
+        else:
+            total_debt = sum(debt.total_balance for debt in debts)
+            if total_debt < 5000:
+                score += 10
+            elif total_debt < 15000:
+                score += 5
+        
+        # Penalty for high expenses relative to income
+        if total_income > 0 and total_expenses > total_income:
+            score -= 10
+        
+        return min(100, max(0, score))
     
     def get_client_ip(self, request):
         """Extract client IP address"""
@@ -608,6 +764,242 @@ class FinancialAnalysisView(APIView):
         return response_json['candidates'][0]['content']['parts'][0]['text']
 
 
+class ReceiptUploadView(APIView):
+    """Upload receipt and extract transaction data using OCR"""
+    permission_classes = [permissions.IsAuthenticated]
+    
+    def post(self, request):
+        if 'receipt' not in request.FILES:
+            return Response(
+                {"error": "Receipt file is required"}, 
+                status=status.HTTP_400_BAD_REQUEST
+            )
+        
+        receipt_file = request.FILES['receipt']
+        
+        # Validate file type
+        allowed_types = ['image/jpeg', 'image/png', 'image/jpg', 'application/pdf']
+        if receipt_file.content_type not in allowed_types:
+            return Response(
+                {"error": "Invalid file type. Please upload JPEG, PNG, or PDF"}, 
+                status=status.HTTP_400_BAD_REQUEST
+            )
+        
+        # Validate file size (max 10MB)
+        if receipt_file.size > 10 * 1024 * 1024:
+            return Response(
+                {"error": "File size too large. Maximum size is 10MB"}, 
+                status=status.HTTP_400_BAD_REQUEST
+            )
+        
+        try:
+            # Save receipt temporarily
+            from django.core.files.storage import default_storage
+            from django.core.files.base import ContentFile
+            import os
+            
+            # Create unique filename
+            ext = receipt_file.name.split('.')[-1]
+            filename = f"receipts/{request.user.id}/{uuid.uuid4()}.{ext}"
+            path = default_storage.save(filename, ContentFile(receipt_file.read()))
+            
+            # Extract text from receipt using OCR
+            extracted_data = self.extract_receipt_data(path)
+            
+            # Create transaction from extracted data
+            transaction = self.create_transaction_from_receipt(request.user, extracted_data)
+            
+            # Clean up temporary file
+            default_storage.delete(path)
+            
+            return Response({
+                'message': 'Receipt processed successfully',
+                'extracted_data': extracted_data,
+                'transaction': TransactionSerializer(transaction).data
+            }, status=status.HTTP_201_CREATED)
+            
+        except Exception as e:
+            return Response(
+                {"error": f"Failed to process receipt: {str(e)}"}, 
+                status=status.HTTP_500_INTERNAL_SERVER_ERROR
+            )
+    
+    def extract_receipt_data(self, file_path):
+        """Extract data from receipt using OCR"""
+        extracted_data = {
+            'merchant': '',
+            'amount': 0.0,
+            'date': timezone.now().date().isoformat(),
+            'items': [],
+            'category': 'Other'
+        }
+        
+        try:
+            # Try to use Google Vision API if available
+            if settings.GOOGLE_VISION_API_KEY:
+                extracted_data = self.extract_with_google_vision(file_path)
+            else:
+                # Fallback to basic extraction
+                extracted_data = self.extract_basic(file_path)
+        except Exception as e:
+            print(f"OCR extraction error: {e}")
+        
+        return extracted_data
+    
+    def extract_with_google_vision(self, file_path):
+        """Extract text using Google Vision API"""
+        import base64
+        import json
+        
+        # Read file and encode to base64
+        with open(file_path, 'rb') as image_file:
+            image_content = base64.b64encode(image_file.read()).decode('utf-8')
+        
+        # Prepare request
+        api_url = f"https://vision.googleapis.com/v1/images:annotate?key={settings.GOOGLE_VISION_API_KEY}"
+        
+        payload = {
+            "requests": [
+                {
+                    "image": {
+                        "content": image_content
+                    },
+                    "features": [
+                        {
+                            "type": "TEXT_DETECTION",
+                            "maxResults": 1
+                        }
+                    ]
+                }
+            ]
+        }
+        
+        response = requests.post(api_url, json=payload, timeout=30)
+        response.raise_for_status()
+        result = response.json()
+        
+        # Extract text
+        if 'responses' in result and result['responses']:
+            text_annotations = result['responses'][0].get('textAnnotations', [])
+            if text_annotations:
+                full_text = text_annotations[0].get('description', '')
+                return self.parse_receipt_text(full_text)
+        
+        return self.extract_basic(file_path)
+    
+    def extract_basic(self, file_path):
+        """Basic extraction without OCR API"""
+        # In a real implementation, you might use Tesseract or another OCR library
+        # For now, return placeholder data
+        return {
+            'merchant': 'Unknown Merchant',
+            'amount': 0.0,
+            'date': timezone.now().date().isoformat(),
+            'items': [],
+            'category': 'Other',
+            'raw_text': ''
+        }
+    
+    def parse_receipt_text(self, text):
+        """Parse receipt text to extract merchant, amount, date"""
+        import re
+        from datetime import datetime
+        
+        extracted = {
+            'merchant': 'Unknown Merchant',
+            'amount': 0.0,
+            'date': timezone.now().date().isoformat(),
+            'items': [],
+            'category': 'Other',
+            'raw_text': text
+        }
+        
+        # Extract amount (look for total, amount, etc.)
+        amount_patterns = [
+            r'total[:\s]*\$?(\d+\.?\d*)',
+            r'amount[:\s]*\$?(\d+\.?\d*)',
+            r'\$(\d+\.?\d*)\s*$',
+        ]
+        
+        for pattern in amount_patterns:
+            match = re.search(pattern, text, re.IGNORECASE | re.MULTILINE)
+            if match:
+                extracted['amount'] = float(match.group(1))
+                break
+        
+        # Extract date
+        date_patterns = [
+            r'(\d{1,2}[/-]\d{1,2}[/-]\d{2,4})',
+            r'(\d{4}[/-]\d{1,2}[/-]\d{1,2})',
+        ]
+        
+        for pattern in date_patterns:
+            match = re.search(pattern, text)
+            if match:
+                try:
+                    date_str = match.group(1)
+                    for fmt in ['%m/%d/%Y', '%m-%d-%Y', '%Y-%m-%d', '%d/%m/%Y']:
+                        try:
+                            parsed_date = datetime.strptime(date_str, fmt).date()
+                            extracted['date'] = parsed_date.isoformat()
+                            break
+                        except ValueError:
+                            continue
+                except Exception:
+                    pass
+                break
+        
+        # Extract merchant (usually first line or near store/shop keywords)
+        lines = text.split('\n')
+        for line in lines[:5]:  # Check first 5 lines
+            if len(line.strip()) > 3 and not re.match(r'^\d+', line.strip()):
+                extracted['merchant'] = line.strip()[:100]
+                break
+        
+        # Use AI to categorize
+        if extracted['amount'] > 0:
+            extracted['category'] = self.categorize_with_ai(
+                extracted['merchant'], 
+                extracted['amount'], 
+                text[:500]
+            )
+        
+        return extracted
+    
+    def categorize_with_ai(self, merchant, amount, context=''):
+        """Use AI to categorize the transaction"""
+        from .services import GeminiCopilotService
+        return GeminiCopilotService.categorize_transaction(merchant, amount, context)
+    
+    def create_transaction_from_receipt(self, user, extracted_data):
+        """Create a transaction from extracted receipt data"""
+        # Get user's default account or first active account
+        account = Account.objects.filter(user=user, is_active=True).first()
+        if not account:
+            raise ValueError("No active account found. Please create an account first.")
+        
+        # Parse date
+        try:
+            parsed_date = datetime.strptime(extracted_data['date'], '%Y-%m-%d').date()
+            timestamp = timezone.make_aware(datetime.combine(parsed_date, time.min))
+        except Exception:
+            timestamp = timezone.now()
+        
+        # Create transaction
+        transaction = Transaction.objects.create(
+            account=account,
+            title=f"Receipt: {extracted_data['merchant']}",
+            amount=Decimal(str(extracted_data['amount'])),
+            category=extracted_data['category'],
+            type='EXPENSE',
+            timestamp=timestamp,
+            note=f"Auto-categorized from receipt. Items: {', '.join(extracted_data.get('items', [])[:3])}",
+            tags="Receipt, Auto-Categorized"
+        )
+        
+        return transaction
+
+
 class NaturalLanguageSearchView(APIView):
     """Natural language search for transactions"""
     permission_classes = [permissions.IsAuthenticated]
@@ -651,7 +1043,15 @@ class NaturalLanguageSearchView(APIView):
     
     def parse_search_query(self, query):
         """Use AI to parse natural language query into search parameters"""
-        # Simple keyword-based parsing (in production, use AI)
+        # Use AI for better parsing
+        try:
+            search_params = self.parse_with_ai(query)
+            if search_params:
+                return search_params
+        except Exception:
+            pass
+        
+        # Fallback to keyword-based parsing
         params = {}
         query_lower = query.lower()
         
@@ -675,3 +1075,49 @@ class NaturalLanguageSearchView(APIView):
             params['end_date'] = timezone.now()
         
         return params
+    
+    def parse_with_ai(self, query):
+        """Use Gemini AI to parse natural language query"""
+        prompt = f"""Parse this financial search query into structured parameters. Return JSON only.
+        
+Query: "{query}"
+
+Extract these parameters if present:
+- category (e.g., food, transport, shopping)
+- min_amount (number)
+- max_amount (number)
+- start_date (YYYY-MM-DD format)
+- end_date (YYYY-MM-DD format)
+- merchant (store/merchant name)
+- type (INCOME or EXPENSE)
+
+Return format: {{"category": "...", "min_amount": 0, "max_amount": 0, "start_date": "...", "end_date": "...", "merchant": "...", "type": "..."}}
+
+Only include parameters that are clearly mentioned in the query. Return empty JSON {{}} if none found."""
+
+        api_url = f"https://generativelanguage.googleapis.com/v1beta/models/gemini-1.5-flash:generateContent?key={settings.GEMINI_API_KEY}"
+        
+        payload = {
+            "contents": [{"parts": [{"text": prompt}]}],
+            "generationConfig": {
+                "temperature": 0.1,
+                "maxOutputTokens": 200,
+            }
+        }
+        
+        response = requests.post(api_url, json=payload, timeout=10)
+        response.raise_for_status()
+        result = response.json()
+        
+        ai_text = result['candidates'][0]['content']['parts'][0]['text']
+        
+        # Extract JSON from response
+        import json
+        import re
+        json_match = re.search(r'\{.*\}', ai_text, re.DOTALL)
+        if json_match:
+            params = json.loads(json_match.group())
+            # Clean up empty values
+            return {k: v for k, v in params.items() if v not in [None, '', 0]}
+        
+        return {}

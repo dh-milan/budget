@@ -517,3 +517,176 @@ class AttachmentUploadView(APIView):
         if x_forwarded_for:
             return x_forwarded_for.split(',')[0]
         return request.META.get('REMOTE_ADDR')
+
+
+class NetWorthView(APIView):
+    """Calculate user's net worth across all accounts"""
+    permission_classes = [permissions.IsAuthenticated]
+    
+    def get(self, request):
+        accounts = Account.objects.filter(user=request.user, is_active=True)
+        
+        # Calculate total assets (positive balances)
+        assets = accounts.filter(
+            Q(type='CHECKING') | Q(type='SAVINGS') | Q(type='INVESTMENT') | Q(type='CASH')
+        )
+        total_assets = sum(acc.balance for acc in assets if acc.balance > 0)
+        
+        # Calculate total liabilities (negative balances or loan/credit types)
+        liabilities = accounts.filter(
+            Q(type='CREDIT_CARD') | Q(type='LOAN')
+        )
+        total_liabilities = sum(abs(acc.balance) for acc in liabilities if acc.balance < 0)
+        
+        # Add debts from budgeting app
+        from apps.budgeting.models import Debt
+        debts = Debt.objects.filter(user=request.user, is_active=True)
+        total_debt_balance = sum(debt.total_balance for debt in debts)
+        total_liabilities += total_debt_balance
+        
+        net_worth = total_assets - total_liabilities
+        
+        # Account breakdown
+        account_breakdown = []
+        for acc in accounts:
+            account_breakdown.append({
+                'id': str(acc.id),
+                'name': acc.name,
+                'type': acc.type,
+                'balance': str(acc.balance),
+                'currency': acc.currency
+            })
+        
+        data = {
+            'total_assets': total_assets,
+            'total_liabilities': total_liabilities,
+            'net_worth': net_worth,
+            'account_count': accounts.count(),
+            'account_breakdown': account_breakdown,
+            'debt_count': debts.count()
+        }
+        
+        return Response(data)
+
+
+class CashFlowReportView(APIView):
+    """Generate cash flow reports for a date range"""
+    permission_classes = [permissions.IsAuthenticated]
+    
+    def get(self, request):
+        # Date range parameters
+        start_date = request.query_params.get('start_date')
+        end_date = request.query_params.get('end_date')
+        period = request.query_params.get('period', 'month')  # month, quarter, year
+        
+        # Calculate date range
+        today = timezone.now()
+        if period == 'month':
+            start_date = today.replace(day=1, hour=0, minute=0, second=0, microsecond=0)
+            end_date = (start_date + timedelta(days=32)).replace(day=1) - timedelta(seconds=1)
+        elif period == 'quarter':
+            quarter_start = ((today.month - 1) // 3) * 3 + 1
+            start_date = today.replace(month=quarter_start, day=1, hour=0, minute=0, second=0, microsecond=0)
+            end_date = (start_date + timedelta(days=95)).replace(day=1) - timedelta(seconds=1)
+        elif period == 'year':
+            start_date = today.replace(month=1, day=1, hour=0, minute=0, second=0, microsecond=0)
+            end_date = today.replace(month=12, day=31, hour=23, minute=59, second=59)
+        else:
+            start_date = datetime.fromisoformat(start_date) if start_date else today.replace(day=1)
+            end_date = datetime.fromisoformat(end_date) if end_date else today
+        
+        # Get all user transactions
+        transactions = Transaction.objects.filter(
+            account__user=request.user,
+            timestamp__gte=start_date,
+            timestamp__lte=end_date
+        ).select_related('account')
+        
+        # Calculate cash flow metrics
+        total_income = transactions.filter(type='INCOME').aggregate(
+            total=Sum('amount')
+        )['total'] or Decimal('0.00')
+        
+        total_expenses = transactions.filter(type='EXPENSE').aggregate(
+            total=Sum('amount')
+        )['total'] or Decimal('0.00')
+        
+        net_cash_flow = total_income - total_expenses
+        
+        # Income by category
+        income_by_category = {}
+        for tx in transactions.filter(type='INCOME'):
+            cat = tx.category
+            income_by_category[cat] = income_by_category.get(cat, Decimal('0.00')) + tx.amount
+        
+        # Expenses by category
+        expenses_by_category = {}
+        for tx in transactions.filter(type='EXPENSE'):
+            cat = tx.category
+            expenses_by_category[cat] = expenses_by_category.get(cat, Decimal('0.00')) + tx.amount
+        
+        # Daily cash flow (for charting)
+        daily_cash_flow = {}
+        for tx in transactions:
+            date_key = tx.timestamp.date().isoformat()
+            if date_key not in daily_cash_flow:
+                daily_cash_flow[date_key] = {'income': Decimal('0.00'), 'expenses': Decimal('0.00')}
+            
+            if tx.type == 'INCOME':
+                daily_cash_flow[date_key]['income'] += tx.amount
+            elif tx.type == 'EXPENSE':
+                daily_cash_flow[date_key]['expenses'] += tx.amount
+        
+        data = {
+            'period': period,
+            'start_date': start_date.isoformat() if isinstance(start_date, datetime) else start_date,
+            'end_date': end_date.isoformat() if isinstance(end_date, datetime) else end_date,
+            'total_income': total_income,
+            'total_expenses': total_expenses,
+            'net_cash_flow': net_cash_flow,
+            'savings_rate': (net_cash_flow / total_income * 100) if total_income > 0 else 0,
+            'income_by_category': income_by_category,
+            'expenses_by_category': expenses_by_category,
+            'daily_cash_flow': daily_cash_flow,
+            'transaction_count': transactions.count()
+        }
+        
+        return Response(data)
+
+
+class TransactionSearchView(APIView):
+    """Advanced transaction search with categorization suggestions"""
+    permission_classes = [permissions.IsAuthenticated]
+    
+    def get(self, request):
+        query = request.query_params.get('q', '')
+        limit = int(request.query_params.get('limit', 50))
+        
+        if not query:
+            return Response({'transactions': [], 'suggestions': []})
+        
+        # Search in title, notes, tags, and category
+        transactions = Transaction.objects.filter(
+            account__user=request.user
+        ).filter(
+            Q(title__icontains=query) |
+            Q(note__icontains=query) |
+            Q(tags__icontains=query) |
+            Q(category__icontains=query)
+        )[:limit]
+        
+        serializer = TransactionSerializer(transactions, many=True)
+        
+        # Get category suggestions based on search
+        categories = Category.objects.filter(
+            user=request.user,
+            name__icontains=query,
+            is_active=True
+        )[:10]
+        
+        suggestions = [cat.name for cat in categories]
+        
+        return Response({
+            'transactions': serializer.data,
+            'suggestions': suggestions
+        })
