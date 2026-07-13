@@ -105,7 +105,7 @@ fun InvestmentPortfolioScreen(
                     .padding(paddingValues)
                     .padding(horizontal = 16.dp),
                 verticalArrangement = Arrangement.spacedBy(16.dp),
-                contentPadding = PaddingValues(vertical = 16.dp, bottom = 80.dp)
+                contentPadding = PaddingValues(vertical = 16.dp)
             ) {
                 // Portfolio header
                 if (totalBalance != null) {
@@ -223,7 +223,7 @@ fun PortfolioHeaderCard(balance: Double, profit: Double, profitPercentage: Doubl
                 Icon(imageVector = icon, contentDescription = null, tint = color, modifier = Modifier.size(20.dp))
                 Spacer(modifier = Modifier.width(4.dp))
                 Text(
-                    text = "$sign$${"%.2f".format(Math.abs(profit))} (${"%.2f".format(profitPercentage)}%)",
+                    text = "$sign$${"%.2f".format(kotlin.math.abs(profit))} (${"%.2f".format(profitPercentage)}%)",
                     style = MaterialTheme.typography.bodyLarge,
                     fontWeight = FontWeight.Medium,
                     color = color

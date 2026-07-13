@@ -849,6 +849,7 @@ fun TrendsTab() {
 
                     Spacer(modifier = Modifier.height(12.dp))
 
+                    val outlineColor = MaterialTheme.colorScheme.outline.copy(alpha = 0.5f)
                     Box(
                         modifier = Modifier
                             .fillMaxWidth()
@@ -875,7 +876,7 @@ fun TrendsTab() {
 
                             drawPath(
                                 path = path,
-                                color = MaterialTheme.colorScheme.outline.copy(alpha = 0.5f),
+                                color = outlineColor,
                                 style = Stroke(width = 3f)
                             )
                         }

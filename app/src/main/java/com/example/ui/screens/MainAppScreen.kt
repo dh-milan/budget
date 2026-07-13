@@ -95,7 +95,6 @@ fun MainAppScreen(
     }
 
     Scaffold(
-                        onNavigateToSettings = { showSettingsScreen = true },
         topBar = {
             CenterAlignedTopAppBar(
                 title = {
@@ -181,6 +180,7 @@ fun MainAppScreen(
                             ScreenTab.Budgets -> showAddBudgetDialog = true
                             ScreenTab.Bills -> showAddBillDialog = true
                             ScreenTab.Analytics -> {}
+                            ScreenTab.Profile -> {}
                             ScreenTab.Assistant -> {}
                         }
                     },
@@ -194,6 +194,7 @@ fun MainAppScreen(
                                 ScreenTab.Budgets -> "New Budget"
                                 ScreenTab.Bills -> "New Bill"
                                 ScreenTab.Analytics -> "Report"
+                                ScreenTab.Profile -> ""
                                 ScreenTab.Assistant -> "Ask AI"
                             }
                         )
@@ -315,6 +316,7 @@ fun MainAppScreen(
         )
     }
 }
+}
 
 // ==================== DASHBOARD VIEW ====================
 
@@ -327,18 +329,15 @@ fun DashboardScreenView(
     onAddGoalClick: () -> Unit
 ) {
     val totalIncome = transactions.filter { it.type == "INCOME" }.sumOf { it.amount }
-                        onNavigateToSettings = { showSettingsScreen = true },
+    val totalExpense = transactions.filter { it.type == "EXPENSE" }.sumOf { it.amount }
     val netWorth = totalIncome - totalExpense
 
     LazyColumn(
-                }
-            }
-        }
-    }
-
-    BackHandler(enabled = showSettingsScreen) {
-        showSettingsScreen = false
         modifier = Modifier
+            .fillMaxSize()
+            .padding(horizontal = 16.dp, vertical = 8.dp),
+        verticalArrangement = Arrangement.spacedBy(16.dp)
+    ) {
         // Premium Greeting Header Item (Bento Style)
         item {
             Row(
@@ -388,7 +387,7 @@ fun DashboardScreenView(
                     .height(180.dp)
                     .clip(RoundedCornerShape(28.dp))
             ) {
-                Image(
+                androidx.compose.foundation.Image(
                     painter = painterResource(id = R.drawable.img_hero_dashboard),
                     contentDescription = "Futuristic Chart Layout",
                     modifier = Modifier.fillMaxSize(),
@@ -1821,14 +1820,4 @@ fun SwipeToDeleteContainer(onDelete: () -> Unit, content: @Composable () -> Unit
     Box(modifier = Modifier.fillMaxWidth()) {
         content()
     }
-}
-
-@Composable
-fun Image(painter: androidx.compose.ui.graphics.painter.Painter, contentDescription: String, modifier: Modifier, contentScale: ContentScale) {
-    androidx.compose.foundation.Image(
-        painter = painter,
-        contentDescription = contentDescription,
-        modifier = modifier,
-        contentScale = contentScale
-    )
 }
