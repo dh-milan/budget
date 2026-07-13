@@ -1,19 +1,18 @@
 package com.example.ui.viewmodel
 
 import android.app.Application
+import android.content.Context
 import androidx.lifecycle.AndroidViewModel
 import androidx.lifecycle.viewModelScope
 import com.example.data.database.AppDatabase
 import com.example.data.repository.FinanceRepository
 import com.example.data.model.*
-import com.example.data.api.GeminiClient
-import com.example.data.api.GeminiRequest
-import com.example.data.api.GeminiContent
-import com.example.data.api.GeminiPart
+import com.example.data.api.*
 import kotlinx.coroutines.flow.*
 import kotlinx.coroutines.launch
 import com.example.BuildConfig
 import android.util.Log
+import android.widget.Toast
 
 class FinanceViewModel(application: Application) : AndroidViewModel(application) {
     private val database = AppDatabase.getDatabase(application)
@@ -24,6 +23,12 @@ class FinanceViewModel(application: Application) : AndroidViewModel(application)
         database.debtDao(),
         database.billDao()
     )
+    
+    // Backend API client
+    private val apiService = RetrofitClient.apiService
+    private val context = application.applicationContext
+    
+    private var authToken: String? = null
 
     // Reactive flows
     val transactions: StateFlow<List<TransactionEntity>> = repository.allTransactions
@@ -206,7 +211,9 @@ class FinanceViewModel(application: Application) : AndroidViewModel(application)
                 // Compile history
                 val apiKey = BuildConfig.GEMINI_API_KEY
                 if (apiKey.isEmpty() || apiKey == "MY_GEMINI_API_KEY") {
-                    _chatHistory.update { it + ChatMessage("model", "Please configure your GEMINI_API_KEY in the AI Studio Secrets panel to activate full AI assistance capabilities.") }
+                    // Provide intelligent local fallback response without API
+                    val localResponse = generateLocalFinancialAdvice(message, totalIncome, totalExpense, budgets, goals, debts, bills)
+                    _chatHistory.update { it + ChatMessage("model", localResponse) }
                     _isAiThinking.value = false
                     return@launch
                 }
@@ -224,7 +231,9 @@ class FinanceViewModel(application: Application) : AndroidViewModel(application)
                 _chatHistory.update { it + ChatMessage("model", reply) }
             } catch (e: Exception) {
                 Log.e("FinanceViewModel", "Gemini error", e)
-                _chatHistory.update { it + ChatMessage("model", "Error connecting to AI Assistant: ${e.localizedMessage}. Please double-check your connection and Gemini API Key.") }
+                // Provide local fallback on error
+                val localResponse = generateLocalFinancialAdvice(message, totalIncome, totalExpense, budgets, goals, debts, bills)
+                _chatHistory.update { it + ChatMessage("model", localResponse) }
             } finally {
                 _isAiThinking.value = false
             }
@@ -241,31 +250,123 @@ class FinanceViewModel(application: Application) : AndroidViewModel(application)
         return sb.toString()
     }
 
-    // Prep some initial beautiful mock data so first launch is amazing!
+    // No mock data - app starts fresh and connects to backend
     fun prepopulateData() {
+        // Data will be loaded from backend API when connected
+        loadDataFromBackend()
+    }
+    
+    // Backend API Integration
+    private fun loadDataFromBackend() {
         viewModelScope.launch {
-            if (transactions.value.isEmpty()) {
-                addTransaction("Salary Deposit", 5000.0, "Salary", "INCOME", "Monthly salary payout", "Salary, Primary")
-                addTransaction("Elite Organic Grocery", 240.0, "Food", "EXPENSE", "Weekly grocery store shopping", "Organic, Food")
-                addTransaction("Workspace Rent", 1200.0, "Rent", "EXPENSE", "Co-working space desk rental", "Rent, Work")
-                addTransaction("Tech Gadget Shop", 150.0, "Shopping", "EXPENSE", "Mechanical keyboard accessory", "Tech, Accessory")
-                addTransaction("High Speed Internet", 80.0, "Utilities", "EXPENSE", "Gigabit fiber internet bill", "Utilities, Bill")
-                addTransaction("Dividend Payout", 350.0, "Investments", "INCOME", "Quarterly index fund dividend", "Investment, Passive")
-                addTransaction("Aesthetic Cafe Espresso", 6.50, "Food", "EXPENSE", "Flat white coffee", "Coffee, Work")
+            try {
+                val token = authToken
+                if (token != null) {
+                    // Load transactions from backend
+                    val remoteTransactions = apiService.getTransactions("Bearer $token")
+                    remoteTransactions.forEach { netTx ->
+                        val trans = TransactionEntity(
+                            id = netTx.id.toIntOrNull() ?: 0,
+                            title = netTx.title,
+                            amount = netTx.amount.toDoubleOrNull() ?: 0.0,
+                            category = netTx.category,
+                            type = netTx.type,
+                            timestamp = System.currentTimeMillis(),
+                            note = netTx.note,
+                            tags = "",
+                            isRecurring = netTx.is_recurring
+                        )
+                        repository.insertTransaction(trans)
+                    }
+                }
+            } catch (e: Exception) {
+                Log.e("FinanceViewModel", "Backend sync error", e)
+                // App continues with local data if backend is not available
+            }
+        }
+    }
+    
+    fun login(email: String, password: String) {
+        viewModelScope.launch {
+            try {
+                val response = apiService.login(LoginRequest(email, password))
+                authToken = response.access
+                Toast.makeText(context, "Login successful!", Toast.LENGTH_SHORT).show()
+                loadDataFromBackend()
+            } catch (e: Exception) {
+                Log.e("FinanceViewModel", "Login error", e)
+                Toast.makeText(context, "Login failed: ${e.message}", Toast.LENGTH_SHORT).show()
+            }
+        }
+    }
 
-                addBudget("Food", 600.0)
-                addBudget("Shopping", 400.0)
-                addBudget("Rent", 1500.0)
-                addBudget("Utilities", 200.0)
+    // Local financial advice generator (works without API)
+    private fun generateLocalFinancialAdvice(
+        message: String,
+        totalIncome: Double,
+        totalExpense: Double,
+        budgets: List<BudgetEntity>,
+        goals: List<GoalEntity>,
+        debts: List<DebtEntity>,
+        bills: List<BillEntity>
+    ): String {
+        val cashFlow = totalIncome - totalExpense
+        val lowerMessage = message.lowercase()
 
-                addGoal("Emergency Reserve Fund", 20000.0, 8500.0, System.currentTimeMillis() + (365L * 24 * 60 * 60 * 1000))
-                addGoal("European Summer Retreat", 6000.0, 2400.0, System.currentTimeMillis() + (180L * 24 * 60 * 60 * 1000))
-
-                addDebt("Sapphire Credit Card", "CREDIT_CARD", 1250.0, 18.9, System.currentTimeMillis() + (15L * 24 * 60 * 60 * 1000), 150.0)
-                addDebt("Premium Automobile Loan", "LOAN", 18400.0, 4.5, System.currentTimeMillis() + (25L * 24 * 60 * 60 * 1000), 450.0)
-
-                addBill("Premium Video Subscription", 15.99, System.currentTimeMillis() + (5L * 24 * 60 * 60 * 1000), "Entertainment")
-                addBill("Gym Membership Subscription", 80.0, System.currentTimeMillis() + (12L * 24 * 60 * 60 * 1000), "Healthcare")
+        return when {
+            lowerMessage.contains("budget") || lowerMessage.contains("suggest") -> {
+                if (budgets.isEmpty()) {
+                    "You haven't set up any budgets yet. Start by creating category limits for Food, Shopping, Rent, and Utilities to track your spending effectively."
+                } else {
+                    val overspent = budgets.filter { it.spentAmount > it.limitAmount }
+                    if (overspent.isNotEmpty()) {
+                        "Alert: You're over budget in ${overspent.joinToString { it.category }}. Consider reducing spending in these categories or increasing your limits."
+                    } else {
+                        "You're managing your budgets well. Consider allocating 20% of your income to savings goals for better financial health."
+                    }
+                }
+            }
+            lowerMessage.contains("save") || lowerMessage.contains("goal") -> {
+                if (goals.isEmpty()) {
+                    "You haven't set any savings goals. Start by creating an emergency fund goal - aim for 3-6 months of expenses."
+                } else {
+                    val activeGoals = goals.joinToString { "${it.name}: $${String.format("%,.0f", it.currentAmount)} / $${String.format("%,.0f", it.targetAmount)}" }
+                    "Your active goals: $activeGoals. Keep contributing consistently to reach your targets faster."
+                }
+            }
+            lowerMessage.contains("debt") || lowerMessage.contains("loan") -> {
+                if (debts.isEmpty()) {
+                    "You have no recorded debts. Great financial discipline! Consider investing your surplus cash flow."
+                } else {
+                    val highInterest = debts.filter { it.interestRate > 10 }
+                    if (highInterest.isNotEmpty()) {
+                        "Priority: Pay off high-interest debts first: ${highInterest.joinToString { "${it.name} (${it.interestRate}%)" }}. This will save you money on interest payments."
+                    } else {
+                        "You have ${debts.size} active debt(s). Continue making regular payments to reduce your total balance."
+                    }
+                }
+            }
+            lowerMessage.contains("spend") || lowerMessage.contains("expense") -> {
+                if (totalExpense > totalIncome) {
+                    "Warning: Your expenses ($${String.format("%,.2f", totalExpense)}) exceed your income ($${String.format("%,.2f", totalIncome)}). Review your spending patterns and cut non-essential expenses."
+                } else {
+                    "Your spending is within healthy limits. You have a positive cash flow of $${String.format("%,.2f", cashFlow)}. Consider investing the surplus."
+                }
+            }
+            lowerMessage.contains("bill") -> {
+                val unpaidBills = bills.filter { !it.isPaid }
+                if (unpaidBills.isEmpty()) {
+                    "All bills are paid! You're in great shape. Set up automatic payments to maintain this streak."
+                } else {
+                    "You have ${unpaidBills.size} unpaid bill(s) totaling $${String.format("%,.2f", unpaidBills.sumOf { it.amount })}. Prioritize these payments to avoid late fees."
+                }
+            }
+            else -> {
+                when {
+                    cashFlow > 0 -> "Your financial health looks good with a positive cash flow of $${String.format("%,.2f", cashFlow)}. Focus on building emergency savings and investing for long-term growth."
+                    cashFlow < 0 -> "Your expenses exceed income by $${String.format("%,.2f", kotlin.math.abs(cashFlow))}. Review your budget and identify areas to reduce spending."
+                    else -> "Your income and expenses are balanced. This is a good time to set up savings goals and investment plans for the future."
+                }
             }
         }
     }

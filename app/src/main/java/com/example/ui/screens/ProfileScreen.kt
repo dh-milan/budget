@@ -70,13 +70,13 @@ fun ProfileScreen(
                 }
                 Spacer(modifier = Modifier.height(12.dp))
                 Text(
-                    text = "Alex Rivera",
+                    text = "User",
                     fontSize = 22.sp,
                     fontWeight = FontWeight.Bold,
                     color = Color.White
                 )
                 Text(
-                    text = "alex.rivera@example.com",
+                    text = "user@example.com",
                     fontSize = 14.sp,
                     color = Color.White.copy(alpha = 0.9f),
                     modifier = Modifier.padding(top = 4.dp)

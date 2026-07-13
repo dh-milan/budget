@@ -2,34 +2,59 @@ package com.example.ui.theme
 
 import androidx.compose.ui.graphics.Color
 
-// Bento Grid Purple / Lavender Theme Palette
-val BentoPrimary = Color(0xFF6750A4)
-val BentoOnPrimary = Color(0xFFFFFFFF)
-val BentoPrimaryContainer = Color(0xFFEADDFF)
-val BentoOnPrimaryContainer = Color(0xFF21005D)
+// Premium Fintech Theme - Dark & Sleek
+val PremiumBackground = Color(0xFF0A0C10)
+val PremiumSurface = Color(0xFF13161F)
+val PremiumSurfaceVariant = Color(0xFF1D212E)
 
-val BentoSecondary = Color(0xFF625B71)
-val BentoOnSecondary = Color(0xFFFFFFFF)
-val BentoSecondaryContainer = Color(0xFFE8DEF8)
-val BentoOnSecondaryContainer = Color(0xFF1D192B)
+val PremiumPrimary = Color(0xFF00E5FF) // Neon Cyan
+val PremiumOnPrimary = Color(0xFF000000)
+val PremiumPrimaryContainer = Color(0xFF00515B)
+val PremiumOnPrimaryContainer = Color(0xFF80F2FF)
 
-val BentoTertiary = Color(0xFF7D5260)
-val BentoOnTertiary = Color(0xFFFFFFFF)
-val BentoTertiaryContainer = Color(0xFFFFD8E4)
-val BentoOnTertiaryContainer = Color(0xFF31111D)
+val PremiumSecondary = Color(0xFF7C4DFF) // Deep Purple
+val PremiumOnSecondary = Color(0xFFFFFFFF)
+val PremiumSecondaryContainer = Color(0xFF32008A)
+val PremiumOnSecondaryContainer = Color(0xFFE4D5FF)
 
-val BentoBackground = Color(0xFFFCF8FF)
-val BentoOnBackground = Color(0xFF1D1B20)
-val BentoSurface = Color(0xFFF3EFF7)
-val BentoOnSurface = Color(0xFF1D1B20)
+val PremiumTertiary = Color(0xFFFF2A5F) // Neon Pink Accent
+val PremiumOnTertiary = Color(0xFFFFFFFF)
 
-val BentoSurfaceVariant = Color(0xFFE7E0EC)
-val BentoOnSurfaceVariant = Color(0xFF49454F)
-val BentoOutline = Color(0xFFCAC4D0)
+val PremiumOnBackground = Color(0xFFFFFFFF)
+val PremiumOnSurface = Color(0xFFF0F2F5)
+val PremiumOnSurfaceVariant = Color(0xFFA0A5B5)
 
-val BentoError = Color(0xFFB3261E)
-val BentoOnError = Color(0xFFFFFFFF)
+val PremiumOutline = Color(0xFF2C3245)
 
-val BentoAccentGreen = Color(0xFF2E7D32)
-val BentoAccentGold = Color(0xFFD84315)
-val BentoCardAlternative = Color(0xFFF7F2FA)
+val PremiumError = Color(0xFFFF3B30)
+val PremiumOnError = Color(0xFFFFFFFF)
+
+// Accent Colors for Charts and Metrics
+val AccentSuccess = Color(0xFF00C853)
+val AccentWarning = Color(0xFFFFAB00)
+val AccentGradientStart = Color(0xFF00E5FF)
+val AccentGradientEnd = Color(0xFF7C4DFF)
+
+// Original Bento colors mapped to Premium for compatibility
+val BentoPrimary = PremiumPrimary
+val BentoOnPrimary = PremiumOnPrimary
+val BentoPrimaryContainer = PremiumPrimaryContainer
+val BentoOnPrimaryContainer = PremiumOnPrimaryContainer
+val BentoSecondary = PremiumSecondary
+val BentoOnSecondary = PremiumOnSecondary
+val BentoSecondaryContainer = PremiumSecondaryContainer
+val BentoOnSecondaryContainer = PremiumOnSecondaryContainer
+val BentoTertiary = PremiumTertiary
+val BentoOnTertiary = PremiumOnTertiary
+val BentoBackground = PremiumBackground
+val BentoOnBackground = PremiumOnBackground
+val BentoSurface = PremiumSurface
+val BentoOnSurface = PremiumOnSurface
+val BentoSurfaceVariant = PremiumSurfaceVariant
+val BentoOnSurfaceVariant = PremiumOnSurfaceVariant
+val BentoOutline = PremiumOutline
+val BentoError = PremiumError
+val BentoOnError = PremiumOnError
+val BentoAccentGreen = AccentSuccess
+val BentoAccentGold = AccentWarning
+val BentoCardAlternative = PremiumSurfaceVariant
