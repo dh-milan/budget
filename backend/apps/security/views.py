@@ -5,7 +5,7 @@ from django.shortcuts import get_object_or_404
 from django.db.models import Q, Count
 from django.utils import timezone
 from datetime import timedelta
-from .models import TwoFactorAuth, Device, Session, LoginHistory, BiometricAuth
+from .models import TwoFactorAuth, Device, Session, SecurityLoginHistory, BiometricAuth
 from .serializers import (
     TwoFactorAuthSerializer,
     TwoFactorSetupSerializer,
@@ -251,7 +251,7 @@ class LoginHistoryViewSet(viewsets.ReadOnlyModelViewSet):
     
     def get_queryset(self):
         """Return user's login history"""
-        return LoginHistory.objects.filter(user=self.request.user)
+        return SecurityLoginHistory.objects.filter(user=self.request.user)
     
     def list(self, request):
         """Get login history with pagination"""
@@ -354,19 +354,19 @@ class SecurityDashboardViewSet(viewsets.ViewSet):
         trusted_devices = Device.objects.filter(user=user, is_trusted=True).count()
         
         # Get recent logins (last 10)
-        recent_logins = LoginHistory.objects.filter(user=user)[:10]
+        recent_logins = SecurityLoginHistory.objects.filter(user=user)[:10]
         recent_logins_serializer = LoginHistorySerializer(recent_logins, many=True)
         
         # Get failed login attempts (last 30 days)
         thirty_days_ago = timezone.now() - timedelta(days=30)
-        failed_login_attempts = LoginHistory.objects.filter(
+        failed_login_attempts = SecurityLoginHistory.objects.filter(
             user=user,
             status='FAILED',
             created_at__gte=thirty_days_ago
         ).count()
         
         # Get last successful login
-        last_login = LoginHistory.objects.filter(
+        last_login = SecurityLoginHistory.objects.filter(
             user=user,
             status='SUCCESS'
         ).first()

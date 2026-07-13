@@ -25,7 +25,7 @@ class FinanceViewModel(application: Application) : AndroidViewModel(application)
     )
     
     // Backend API client
-    private val apiService = RetrofitClient.apiService
+    private val apiService = RetrofitClient.financeApi
     private val context = application.applicationContext
     
     private var authToken: String? = null
@@ -262,8 +262,8 @@ class FinanceViewModel(application: Application) : AndroidViewModel(application)
             try {
                 val token = authToken
                 if (token != null) {
-                    // Load transactions from backend
-                    val remoteTransactions = apiService.getTransactions("Bearer $token")
+                    // Load transactions from backend (token is automatically added via interceptor)
+                    val remoteTransactions = apiService.getTransactions()
                     remoteTransactions.forEach { netTx ->
                         val trans = TransactionEntity(
                             id = netTx.id.toIntOrNull() ?: 0,
@@ -291,11 +291,29 @@ class FinanceViewModel(application: Application) : AndroidViewModel(application)
             try {
                 val response = apiService.login(LoginRequest(email, password))
                 authToken = response.access
+                // Store token in RetrofitClient for automatic header attachment
+                RetrofitClient.authToken = response.access
                 Toast.makeText(context, "Login successful!", Toast.LENGTH_SHORT).show()
                 loadDataFromBackend()
             } catch (e: Exception) {
                 Log.e("FinanceViewModel", "Login error", e)
                 Toast.makeText(context, "Login failed: ${e.message}", Toast.LENGTH_SHORT).show()
+            }
+        }
+    }
+
+    fun register(name: String, email: String, password: String) {
+        viewModelScope.launch {
+            try {
+                val response = apiService.register(RegisterRequest(email, password, name))
+                authToken = response.access
+                // Store token in RetrofitClient for automatic header attachment
+                RetrofitClient.authToken = response.access
+                Toast.makeText(context, "Account created successfully!", Toast.LENGTH_SHORT).show()
+                loadDataFromBackend()
+            } catch (e: Exception) {
+                Log.e("FinanceViewModel", "Registration error", e)
+                Toast.makeText(context, "Registration failed: ${e.message}", Toast.LENGTH_SHORT).show()
             }
         }
     }

@@ -191,6 +191,7 @@ CORS_ALLOWED_ORIGINS = [
     "http://localhost:3000",
     "http://localhost:8080",
     "http://localhost:8000",
+    "http://192.168.1.68:8000",  # Android app local network access
     "https://wealthflow.app",
     "https://admin.wealthflow.app",
 ]

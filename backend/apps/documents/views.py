@@ -8,6 +8,7 @@ from datetime import datetime, timedelta
 from .models import Document, DocumentTag
 from .serializers import (
     DocumentSerializer,
+    DocumentTagSerializer,
     DocumentSearchSerializer,
     DocumentStatsSerializer
 )

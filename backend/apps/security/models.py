@@ -143,8 +143,8 @@ class Session(models.Model):
         return f"{self.user.email} - {self.ip_address} - {self.created_at}"
 
 
-class LoginHistory(models.Model):
-    """Track login attempts and history"""
+class SecurityLoginHistory(models.Model):
+    """Track login attempts and history for security purposes"""
     STATUS_CHOICES = [
         ('SUCCESS', 'Success'),
         ('FAILED', 'Failed'),
@@ -155,7 +155,7 @@ class LoginHistory(models.Model):
     user = models.ForeignKey(
         settings.AUTH_USER_MODEL, 
         on_delete=models.CASCADE, 
-        related_name='login_history'
+        related_name='security_login_history'
     )
     status = models.CharField(max_length=20, choices=STATUS_CHOICES)
     ip_address = models.GenericIPAddressField()
@@ -165,7 +165,7 @@ class LoginHistory(models.Model):
     created_at = models.DateTimeField(default=timezone.now, db_index=True)
     
     class Meta:
-        db_table = 'login_history'
+        db_table = 'security_login_history'
         indexes = [
             models.Index(fields=['user', 'created_at']),
             models.Index(fields=['user', 'status']),

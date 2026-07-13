@@ -7,11 +7,17 @@ from .views import (
     UserPreferencesView,
     CustomTokenRefreshView,
     CustomTokenVerifyView,
+    EmailLoginView,
+    RegisterView,
 )
 
 urlpatterns = [
     # Google OAuth2 authentication
     path('auth/google/', GoogleAuthView.as_view(), name='google-auth'),
+    
+    # Email/password authentication
+    path('login/', EmailLoginView.as_view(), name='email-login'),
+    path('register/', RegisterView.as_view(), name='register'),
     
     # JWT token endpoints
     path('token/refresh/', CustomTokenRefreshView.as_view(), name='token-refresh'),

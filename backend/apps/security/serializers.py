@@ -1,5 +1,5 @@
 from rest_framework import serializers
-from .models import TwoFactorAuth, Device, Session, LoginHistory, BiometricAuth
+from .models import TwoFactorAuth, Device, Session, SecurityLoginHistory, BiometricAuth
 
 
 class TwoFactorAuthSerializer(serializers.ModelSerializer):
@@ -89,7 +89,7 @@ class SessionSerializer(serializers.ModelSerializer):
 class LoginHistorySerializer(serializers.ModelSerializer):
     """Serializer for login history"""
     class Meta:
-        model = LoginHistory
+        model = SecurityLoginHistory
         fields = [
             'id', 'status', 'ip_address', 'user_agent', 'location',
             'failure_reason', 'created_at'

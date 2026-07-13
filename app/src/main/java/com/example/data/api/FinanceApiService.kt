@@ -38,23 +38,43 @@ data class LoginRequest(
 )
 
 @JsonClass(generateAdapter = true)
+data class RegisterRequest(
+    val email: String,
+    val password: String,
+    val name: String
+)
+
+@JsonClass(generateAdapter = true)
 data class LoginResponse(
     val access: String,
-    val refresh: String
+    val refresh: String,
+    val user: UserData? = null
+)
+
+@JsonClass(generateAdapter = true)
+data class UserData(
+    val id: String,
+    val email: String,
+    val full_name: String,
+    val avatar_url: String?,
+    val role: String,
+    val is_new_user: Boolean
 )
 
 interface FinanceApiService {
     // Auth
-    @POST("auth/token/")
+    @POST("auth/login/")
     suspend fun login(@Body request: LoginRequest): LoginResponse
+
+    @POST("auth/register/")
+    suspend fun register(@Body request: RegisterRequest): LoginResponse
 
     // Ledger (Transactions)
     @GET("ledger/transactions/")
-    suspend fun getTransactions(@Header("Authorization") token: String): List<NetworkTransaction>
+    suspend fun getTransactions(): List<NetworkTransaction>
 
     @POST("ledger/transactions/")
     suspend fun createTransaction(
-        @Header("Authorization") token: String,
         @Body transaction: CreateTransactionRequest
     ): NetworkTransaction
 }

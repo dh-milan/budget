@@ -2,6 +2,7 @@ package com.example.ui.screens
 
 import android.widget.Toast
 import androidx.compose.foundation.BorderStroke
+import androidx.lifecycle.viewmodel.compose.viewModel
 import androidx.compose.foundation.background
 import androidx.compose.foundation.layout.*
 import androidx.compose.foundation.rememberScrollState
@@ -38,6 +39,7 @@ fun LoginScreen(
     var password by remember { mutableStateOf("") }
     var isLoading by remember { mutableStateOf(false) }
     val context = LocalContext.current
+    val financeViewModel: FinanceViewModel = viewModel()
 
     Column(
         modifier = Modifier
@@ -162,7 +164,7 @@ fun LoginScreen(
                 onClick = {
                     if (email.isNotBlank() && password.isNotBlank()) {
                         isLoading = true
-                        // Simulate login
+                        financeViewModel.login(email, password)
                         Toast.makeText(context, "Login successful!", Toast.LENGTH_SHORT).show()
                         onLoginSuccess()
                     } else {
@@ -220,6 +222,7 @@ fun RegisterScreen(
     var confirmPassword by remember { mutableStateOf("") }
     var isLoading by remember { mutableStateOf(false) }
     val context = LocalContext.current
+    val financeViewModel: FinanceViewModel = viewModel()
 
     Column(
         modifier = Modifier
@@ -362,7 +365,7 @@ fun RegisterScreen(
                     if (name.isNotBlank() && email.isNotBlank() && 
                         password.isNotBlank() && password == confirmPassword) {
                         isLoading = true
-                        Toast.makeText(context, "Account created successfully!", Toast.LENGTH_SHORT).show()
+                        financeViewModel.register(name, email, password)
                         onRegisterSuccess()
                     } else {
                         Toast.makeText(context, "Please fill all fields correctly", Toast.LENGTH_SHORT).show()

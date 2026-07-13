@@ -14,6 +14,8 @@ from .models import User, UserPreferences, AuditLog, LoginHistory
 from .serializers import (
     UserSerializer, UserPreferencesSerializer, GoogleAuthSerializer
 )
+from django.contrib.auth import authenticate
+from django.contrib.auth.hashers import make_password
 
 
 class GoogleAuthView(APIView):
@@ -293,3 +295,173 @@ class CustomTokenVerifyView(TokenVerifyView):
     Custom token verify endpoint
     """
     permission_classes = [permissions.AllowAny]
+
+
+class EmailLoginView(APIView):
+    """
+    Standard email/password login endpoint
+    Returns JWT access and refresh tokens
+    """
+    permission_classes = [permissions.AllowAny]
+
+    def post(self, request):
+        email = request.data.get('email', '').lower().strip()
+        password = request.data.get('password', '')
+
+        if not email or not password:
+            return Response(
+                {"error": "Email and password are required"},
+                status=status.HTTP_400_BAD_REQUEST
+            )
+
+        # Authenticate user
+        user = authenticate(request, email=email, password=password)
+        
+        if user is None:
+            return Response(
+                {"error": "Invalid email or password"},
+                status=status.HTTP_401_UNAUTHORIZED
+            )
+
+        if not user.is_active:
+            return Response(
+                {"error": "Account is disabled"},
+                status=status.HTTP_401_UNAUTHORIZED
+            )
+
+        # Generate JWT tokens
+        refresh = RefreshToken.for_user(user)
+        access_token = refresh.access_token
+
+        # Add custom claims to token
+        access_token['email'] = user.email
+        access_token['full_name'] = user.full_name
+        access_token['role'] = user.role
+
+        # Log successful authentication
+        AuditLog.objects.create(
+            user=user,
+            action='EMAIL_LOGIN_SUCCESS',
+            ip_address=self.get_client_ip(request),
+            user_agent=request.META.get('HTTP_USER_AGENT', '')[:255],
+            payload={'method': 'email'}
+        )
+
+        # Track login history
+        LoginHistory.objects.create(
+            user=user,
+            ip_address=self.get_client_ip(request),
+            user_agent=request.META.get('HTTP_USER_AGENT', '')[:255],
+            device_info={'user_agent': request.META.get('HTTP_USER_AGENT', '')}
+        )
+
+        return Response({
+            "access": str(access_token),
+            "refresh": str(refresh),
+            "user": {
+                "id": str(user.id),
+                "email": user.email,
+                "full_name": user.full_name,
+                "avatar_url": user.avatar_url,
+                "role": user.role,
+                "is_new_user": False,
+            }
+        }, status=status.HTTP_200_OK)
+
+    def get_client_ip(self, request):
+        """Extract client IP address from request"""
+        x_forwarded_for = request.META.get('HTTP_X_FORWARDED_FOR')
+        if x_forwarded_for:
+            return x_forwarded_for.split(',')[0]
+        return request.META.get('REMOTE_ADDR')
+
+
+class RegisterView(APIView):
+    """
+    User registration endpoint
+    Creates a new user with email and password
+    """
+    permission_classes = [permissions.AllowAny]
+
+    def post(self, request):
+        email = request.data.get('email', '').lower().strip()
+        password = request.data.get('password', '')
+        full_name = request.data.get('name', '').strip()
+
+        # Validation
+        if not email or not password or not full_name:
+            return Response(
+                {"error": "Email, password, and full name are required"},
+                status=status.HTTP_400_BAD_REQUEST
+            )
+
+        if len(password) < 8:
+            return Response(
+                {"error": "Password must be at least 8 characters long"},
+                status=status.HTTP_400_BAD_REQUEST
+            )
+
+        # Check if user already exists
+        if User.objects.filter(email=email).exists():
+            return Response(
+                {"error": "User with this email already exists"},
+                status=status.HTTP_400_BAD_REQUEST
+            )
+
+        try:
+            # Create new user
+            user = User.objects.create(
+                email=email,
+                full_name=full_name,
+                google_subject_id=f"email_{email}",  # Placeholder for email users
+                role='USER',
+                is_active=True,
+                password=make_password(password)  # Hash the password
+            )
+
+            # Create user preferences
+            UserPreferences.objects.get_or_create(user=user)
+
+            # Generate JWT tokens
+            refresh = RefreshToken.for_user(user)
+            access_token = refresh.access_token
+
+            # Add custom claims to token
+            access_token['email'] = user.email
+            access_token['full_name'] = user.full_name
+            access_token['role'] = user.role
+
+            # Log registration
+            AuditLog.objects.create(
+                user=user,
+                action='USER_REGISTRATION',
+                ip_address=self.get_client_ip(request),
+                user_agent=request.META.get('HTTP_USER_AGENT', '')[:255],
+                payload={'method': 'email'}
+            )
+
+            return Response({
+                "access": str(access_token),
+                "refresh": str(refresh),
+                "user": {
+                    "id": str(user.id),
+                    "email": user.email,
+                    "full_name": user.full_name,
+                    "avatar_url": user.avatar_url,
+                    "role": user.role,
+                    "is_new_user": True,
+                }
+            }, status=status.HTTP_201_CREATED)
+
+        except Exception as e:
+            return Response(
+                {"error": f"Registration failed: {str(e)}"},
+                status=status.HTTP_400_BAD_REQUEST
+            )
+
+    def get_client_ip(self, request):
+        """Extract client IP address from request"""
+        x_forwarded_for = request.META.get('HTTP_X_FORWARDED_FOR')
+        if x_forwarded_for:
+            return x_forwarded_for.split(',')[0]
+        return request.META.get('REMOTE_ADDR')
