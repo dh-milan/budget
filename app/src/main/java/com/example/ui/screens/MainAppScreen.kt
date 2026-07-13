@@ -876,7 +876,7 @@ fun TransactionRow(tx: TransactionEntity) {
         "rent" -> Icons.Default.Home
         "shopping" -> Icons.Default.ShoppingBag
         "utilities" -> Icons.Default.ElectricalServices
-        "investments" -> Icons.AutoMirrored.Filled.TrendingUp
+        "investments" -> Icons.Default.TrendingUp
         else -> Icons.Default.AttachMoney
     }
 
