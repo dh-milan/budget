@@ -88,7 +88,8 @@ enum class ThemeAccent(val label: String, val color: Color) {
 @Composable
 fun MyApplicationTheme(
     darkTheme: Boolean = isSystemInDarkTheme(),
-    dynamicColor: Boolean = false, // Preserve our beautiful brand-aligned Bento identity
+    dynamicColor: Boolean = true, // Enabled dynamic theming for Android 12+
+
     accentColor: Color = BentoPrimary,
     content: @Composable () -> Unit,
 ) {

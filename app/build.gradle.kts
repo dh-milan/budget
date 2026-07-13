@@ -93,9 +93,15 @@ dependencies {
   implementation(libs.androidx.navigation.compose)
   implementation(libs.androidx.room.ktx)
   implementation(libs.androidx.room.runtime)
+  implementation("androidx.work:work-runtime-ktx:2.9.0")
   implementation(libs.coil.compose)
+  implementation("com.airbnb.android:lottie-compose:6.3.0")
   implementation(libs.converter.moshi)
   implementation(libs.firebase.ai)
+  implementation("com.github.PhilJay:MPAndroidChart:v3.1.0")
+  implementation("androidx.glance:glance-appwidget:1.1.0")
+  implementation("androidx.biometric:biometric:1.1.0")
+  implementation("com.google.firebase:firebase-messaging")
   // Uncomment to use Firestore:
   // implementation(libs.firebase.firestore)
 

@@ -22,6 +22,12 @@ interface TransactionDao {
 
     @Query("DELETE FROM transactions WHERE id = :id")
     suspend fun deleteTransaction(id: Int)
+
+    @Query("SELECT * FROM transactions WHERE syncStatus != 'SYNCED'")
+    suspend fun getUnsyncedTransactions(): List<TransactionEntity>
+
+    @Query("UPDATE transactions SET syncStatus = 'SYNCED', remoteId = :remoteId WHERE id = :localId")
+    suspend fun markTransactionSynced(localId: Int, remoteId: String)
 }
 
 @Dao
@@ -37,6 +43,12 @@ interface BudgetDao {
 
     @Query("DELETE FROM budgets WHERE id = :id")
     suspend fun deleteBudget(id: Int)
+
+    @Query("SELECT * FROM budgets WHERE syncStatus != 'SYNCED'")
+    suspend fun getUnsyncedBudgets(): List<BudgetEntity>
+
+    @Query("UPDATE budgets SET syncStatus = 'SYNCED', remoteId = :remoteId WHERE id = :localId")
+    suspend fun markBudgetSynced(localId: Int, remoteId: String)
 }
 
 @Dao
@@ -52,6 +64,12 @@ interface GoalDao {
 
     @Query("DELETE FROM goals WHERE id = :id")
     suspend fun deleteGoal(id: Int)
+
+    @Query("SELECT * FROM goals WHERE syncStatus != 'SYNCED'")
+    suspend fun getUnsyncedGoals(): List<GoalEntity>
+
+    @Query("UPDATE goals SET syncStatus = 'SYNCED', remoteId = :remoteId WHERE id = :localId")
+    suspend fun markGoalSynced(localId: Int, remoteId: String)
 }
 
 @Dao
@@ -67,6 +85,12 @@ interface DebtDao {
 
     @Query("DELETE FROM debts WHERE id = :id")
     suspend fun deleteDebt(id: Int)
+
+    @Query("SELECT * FROM debts WHERE syncStatus != 'SYNCED'")
+    suspend fun getUnsyncedDebts(): List<DebtEntity>
+
+    @Query("UPDATE debts SET syncStatus = 'SYNCED', remoteId = :remoteId WHERE id = :localId")
+    suspend fun markDebtSynced(localId: Int, remoteId: String)
 }
 
 @Dao
@@ -82,4 +106,10 @@ interface BillDao {
 
     @Query("DELETE FROM bills WHERE id = :id")
     suspend fun deleteBill(id: Int)
+
+    @Query("SELECT * FROM bills WHERE syncStatus != 'SYNCED'")
+    suspend fun getUnsyncedBills(): List<BillEntity>
+
+    @Query("UPDATE bills SET syncStatus = 'SYNCED', remoteId = :remoteId WHERE id = :localId")
+    suspend fun markBillSynced(localId: Int, remoteId: String)
 }
