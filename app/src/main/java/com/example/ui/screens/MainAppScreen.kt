@@ -11,6 +11,7 @@ import androidx.compose.foundation.background
 import androidx.compose.foundation.clickable
 import androidx.compose.foundation.lazy.LazyColumn
 import androidx.compose.foundation.lazy.items
+import androidx.compose.foundation.lazy.itemsIndexed
 import androidx.compose.foundation.shape.CircleShape
 import androidx.compose.foundation.shape.RoundedCornerShape
 import androidx.compose.material.icons.Icons
@@ -23,6 +24,8 @@ import androidx.compose.runtime.*
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.draw.clip
+import androidx.compose.ui.draw.scale
+import kotlinx.coroutines.delay
 import androidx.compose.ui.geometry.Offset
 import androidx.compose.ui.graphics.Brush
 import androidx.compose.ui.graphics.Color
@@ -207,13 +210,12 @@ fun MainAppScreen(
                     modifier = Modifier
                         .testTag("fab_add_action")
                         .scale(fabScale)
-                ) {
-                    // Animate back to normal scale - optimized
-                    LaunchedEffect(fabScale) {
-                        if (fabScale != 1f) {
-                            delay(100)
-                            fabScale = 1f
-                        }
+                )
+                // Animate back to normal scale - optimized
+                LaunchedEffect(fabScale) {
+                    if (fabScale != 1f) {
+                        delay(100)
+                        fabScale = 1f
                     }
                 }
             }
@@ -371,7 +373,6 @@ fun MainAppScreen(
         }
     }
 }
-}
 
 // ==================== DASHBOARD VIEW ====================
 
@@ -397,8 +398,7 @@ fun DashboardScreenView(
         item {
             AnimatedVisibility(
                 visible = true,
-                enter = AnimationUtils.SlideInFromBottom + AnimationUtils.FadeIn,
-                initialOffsetY = { -it / 4 }
+                enter = AnimationUtils.SlideInFromBottom + AnimationUtils.FadeIn
             ) {
                 Row(
                     modifier = Modifier
@@ -444,8 +444,7 @@ fun DashboardScreenView(
         item {
             AnimatedVisibility(
                 visible = true,
-                enter = AnimationUtils.SlideInFromBottom + AnimationUtils.FadeIn,
-                initialOffsetY = { -it / 4 }
+                enter = AnimationUtils.SlideInFromBottom + AnimationUtils.FadeIn
             ) {
                 Box(
                     modifier = Modifier
@@ -526,14 +525,14 @@ fun DashboardScreenView(
                     }
                 }
             }
+            }
         }
 
         // Actionable Micro-Insights Panel (Bento style AI Advice block)
         item {
             AnimatedVisibility(
                 visible = true,
-                enter = AnimationUtils.SlideInFromBottom + AnimationUtils.FadeIn,
-                initialOffsetY = { -it / 4 }
+                enter = AnimationUtils.SlideInFromBottom + AnimationUtils.FadeIn
             ) {
                 Card(
                     colors = CardDefaults.cardColors(
@@ -584,14 +583,14 @@ fun DashboardScreenView(
                     }
                 }
             }
+            }
         }
 
         // Custom Interactive Analytics Custom Chart Drawing (Bento styled grid)
         item {
             AnimatedVisibility(
                 visible = true,
-                enter = AnimationUtils.SlideInFromBottom + AnimationUtils.FadeIn,
-                initialOffsetY = { -it / 4 }
+                enter = AnimationUtils.SlideInFromBottom + AnimationUtils.FadeIn
             ) {
                 Card(
                     colors = CardDefaults.cardColors(containerColor = MaterialTheme.colorScheme.surface),
@@ -699,14 +698,15 @@ fun DashboardScreenView(
                     }
                 }
             }
+                }
+            }
         }
 
         // Recent Activity Header Title
         item {
             AnimatedVisibility(
                 visible = true,
-                enter = AnimationUtils.SlideInFromBottom + AnimationUtils.FadeIn,
-                initialOffsetY = { -it / 4 }
+                enter = AnimationUtils.SlideInFromBottom + AnimationUtils.FadeIn
             ) {
                 Row(
                     modifier = Modifier.fillMaxWidth(),
@@ -745,14 +745,15 @@ fun DashboardScreenView(
                 }
             }
         } else {
-            itemsIndexed(dashboardTx) { index, tx ->
-                key(tx.id) {
-                    AnimatedVisibility(
-                        visible = true,
-                        enter = AnimationUtils.staggeredEnter(index = index)
-                    ) {
-                        TransactionRow(tx = tx, onDelete = {})
-                    }
+            itemsIndexed(
+                items = dashboardTx,
+                key = { _: Int, tx: TransactionEntity -> tx.id }
+            ) { index: Int, tx: TransactionEntity ->
+                AnimatedVisibility(
+                    visible = true,
+                    enter = AnimationUtils.staggeredEnter(index = index)
+                ) {
+                    TransactionRow(tx = tx, onDelete = {})
                 }
             }
         }

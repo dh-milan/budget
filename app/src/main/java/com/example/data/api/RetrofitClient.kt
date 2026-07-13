@@ -25,7 +25,7 @@ object RetrofitClient {
     private const val PREF_NAME = "wealthflow_secure_prefs"
     private const val KEY_AUTH_TOKEN = "auth_token"
     
-    private var securePrefs: EncryptedSharedPreferences? = null
+    private var securePrefs: SharedPreferences? = null
 
     private val loggingInterceptor = HttpLoggingInterceptor().apply {
         level = if (BuildConfig.DEBUG) {

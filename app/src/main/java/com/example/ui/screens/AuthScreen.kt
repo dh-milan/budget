@@ -60,8 +60,7 @@ fun LoginScreen(
         // Header with gradient - optimized animation
         AnimatedVisibility(
             visible = startAnimation,
-            enter = AnimationUtils.FadeIn + AnimationUtils.ScaleIn,
-            initialScale = 0.8f
+            enter = AnimationUtils.FadeIn + AnimationUtils.ScaleIn
         ) {
             Box(
                 modifier = Modifier
@@ -261,8 +260,7 @@ fun RegisterScreen(
         // Header
         AnimatedVisibility(
             visible = startAnimation,
-            enter = AnimationUtils.FadeIn + AnimationUtils.ScaleIn,
-            initialScale = 0.8f
+            enter = AnimationUtils.FadeIn + AnimationUtils.ScaleIn
         ) {
             Box(
                 modifier = Modifier
@@ -475,8 +473,7 @@ fun ForgotPasswordScreen(
 
         AnimatedVisibility(
             visible = startAnimation,
-            enter = AnimationUtils.FadeIn + AnimationUtils.ScaleIn,
-            initialScale = 0.5f
+            enter = AnimationUtils.FadeIn + AnimationUtils.ScaleIn
         ) {
             Icon(
                 imageVector = Icons.Default.LockReset,

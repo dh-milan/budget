@@ -17,10 +17,10 @@ object AnimationUtils {
     val FastEaseOut = FastOutSlowInEasing
     val NormalEaseOut = LinearOutSlowInEasing
     val SlowEaseOut = LinearOutSlowInEasing
-    val SpringSpec = spring(dampingRatio = Spring.DampingRatioMediumBouncy, stiffness = Spring.StiffnessLow)
+    val SpringSpec = spring<Float>(dampingRatio = Spring.DampingRatioMediumBouncy, stiffness = Spring.StiffnessLow)
     
     // Optimized spring for UI elements
-    val OptimizedSpring = spring(
+    val OptimizedSpring = spring<Float>(
         dampingRatio = Spring.DampingRatioNoBouncy,
         stiffness = Spring.StiffnessMedium
     )
@@ -79,21 +79,16 @@ object AnimationUtils {
     }
 
     // Pulse animation for FAB - optimized
-    val PulseAnimation = infiniteRepeatable(
+    val PulseAnimation = infiniteRepeatable<Float>(
         animation = tween(1000, easing = LinearEasing),
         repeatMode = RepeatMode.Reverse
     )
 
     // Shimmer animation for loading states
-    val ShimmerAnimation = infiniteRepeatable(
+    val ShimmerAnimation = infiniteRepeatable<Float>(
         animation = tween(2000, easing = LinearEasing),
         repeatMode = RepeatMode.Restart
     )
     
-    // Smooth color transition
-    fun smoothColorTransition() = animateColorAsState(
-        targetValue = it,
-        animationSpec = tween(NORMAL_DURATION, easing = LinearOutSlowInEasing),
-        label = "colorTransition"
-    )
+
 }

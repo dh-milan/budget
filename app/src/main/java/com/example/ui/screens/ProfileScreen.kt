@@ -46,8 +46,7 @@ fun ProfileScreen(
         // Profile Header
         AnimatedVisibility(
             visible = startAnimation,
-            enter = AnimationUtils.FadeIn + AnimationUtils.ScaleIn,
-            initialScale = 0.9f
+            enter = AnimationUtils.FadeIn + AnimationUtils.ScaleIn
         ) {
             Box(
                 modifier = Modifier

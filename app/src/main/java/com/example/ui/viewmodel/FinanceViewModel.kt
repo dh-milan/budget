@@ -347,7 +347,7 @@ class FinanceViewModel(application: Application) : AndroidViewModel(application)
                 val response = apiService.login(LoginRequest(email, password))
                 authToken = response.access
                 // Store token in RetrofitClient for automatic header attachment
-                RetrofitClient.authToken = response.access
+                RetrofitClient.saveAuthToken(response.access)
                 Toast.makeText(context, "Login successful!", Toast.LENGTH_SHORT).show()
                 loadDataFromBackend()
             } catch (e: Exception) {
@@ -363,7 +363,7 @@ class FinanceViewModel(application: Application) : AndroidViewModel(application)
                 val response = apiService.register(RegisterRequest(email, password, name))
                 authToken = response.access
                 // Store token in RetrofitClient for automatic header attachment
-                RetrofitClient.authToken = response.access
+                RetrofitClient.saveAuthToken(response.access)
                 Toast.makeText(context, "Account created successfully!", Toast.LENGTH_SHORT).show()
                 loadDataFromBackend()
             } catch (e: Exception) {

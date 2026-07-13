@@ -193,7 +193,6 @@ fun OverviewTab() {
                     }
                 }
             }
-        }
 
         // Budget Health
         item {
@@ -240,7 +239,6 @@ fun OverviewTab() {
                     }
                 }
             }
-        }
 
         // Year Over Year
         item {
@@ -333,7 +331,6 @@ fun OverviewTab() {
                     }
                 }
             }
-        }
 
         // Spending Heatmap
         item {
@@ -663,8 +660,7 @@ fun ReportTypeCard(
     ) {
         AnimatedVisibility(
             visible = startAnimation,
-            enter = AnimationUtils.FadeIn + AnimationUtils.ScaleIn,
-            initialScale = 0.9f
+            enter = AnimationUtils.FadeIn + AnimationUtils.ScaleIn
         ) {
             Column(
                 modifier = Modifier.padding(20.dp),
