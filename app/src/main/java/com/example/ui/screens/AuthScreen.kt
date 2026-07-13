@@ -42,7 +42,7 @@ fun LoginScreen(
     var password by remember { mutableStateOf("") }
     var isLoading by remember { mutableStateOf(false) }
     val context = LocalContext.current
-    val financeViewModel: FinanceViewModel = viewModel()
+    val financeViewModel: FinanceViewModel = androidx.lifecycle.viewmodel.compose.viewModel()
 
     var startAnimation by remember { mutableStateOf(false) }
 
@@ -243,7 +243,7 @@ fun RegisterScreen(
     var confirmPassword by remember { mutableStateOf("") }
     var isLoading by remember { mutableStateOf(false) }
     val context = LocalContext.current
-    val financeViewModel: FinanceViewModel = viewModel()
+    val financeViewModel: FinanceViewModel = androidx.lifecycle.viewmodel.compose.viewModel()
 
     var startAnimation by remember { mutableStateOf(false) }
 

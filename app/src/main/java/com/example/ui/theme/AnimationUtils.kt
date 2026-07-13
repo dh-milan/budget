@@ -1,6 +1,8 @@
-make package com.example.ui.theme
+package com.example.ui.theme
 
+import androidx.compose.animation.*
 import androidx.compose.animation.core.*
+import androidx.compose.foundation.gestures.animateScrollBy
 import androidx.compose.ui.unit.dp
 
 object AnimationUtils {
@@ -12,9 +14,9 @@ object AnimationUtils {
     const val STAGGER_DELAY = 50 // Delay between list items
 
     // Animation specs - using optimized easing functions
-    val FastEaseOut = EaseOut(FastOutSlowInEasing)
-    val NormalEaseOut = EaseOut(LinearOutSlowInEasing)
-    val SlowEaseOut = EaseOut(LinearOutSlowInEasing)
+    val FastEaseOut = FastOutSlowInEasing
+    val NormalEaseOut = LinearOutSlowInEasing
+    val SlowEaseOut = LinearOutSlowInEasing
     val SpringSpec = spring(dampingRatio = Spring.DampingRatioMediumBouncy, stiffness = Spring.StiffnessLow)
     
     // Optimized spring for UI elements
