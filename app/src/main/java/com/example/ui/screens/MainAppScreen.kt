@@ -16,6 +16,7 @@ import androidx.compose.foundation.shape.CircleShape
 import androidx.compose.foundation.shape.RoundedCornerShape
 import androidx.compose.material.icons.Icons
 import androidx.compose.material.icons.automirrored.filled.ArrowForward
+import androidx.compose.material.icons.automirrored.filled.ReceiptLong
 import androidx.compose.material.icons.automirrored.outlined.Chat
 import androidx.compose.material.icons.filled.*
 import androidx.compose.material.icons.outlined.*
@@ -50,10 +51,11 @@ import com.example.ui.theme.AnimationUtils
 import com.example.ui.viewmodel.FinanceViewModel
 import java.text.SimpleDateFormat
 import java.util.*
+import kotlin.time.Duration.Companion.milliseconds
 
 sealed class ScreenTab(val title: String, val icon: ImageVector) {
     object Dashboard : ScreenTab("Insights", Icons.Default.Dashboard)
-    object Transactions : ScreenTab("Ledger", Icons.Default.ReceiptLong)
+    object Transactions : ScreenTab("Ledger", Icons.AutoMirrored.Filled.ReceiptLong)
     object Budgets : ScreenTab("Budgets", Icons.Default.PieChart)
     object Bills : ScreenTab("Bills & Debt", Icons.Default.CreditCard)
     object Analytics : ScreenTab("Analytics", Icons.Default.Analytics)
@@ -114,7 +116,7 @@ fun MainAppScreen(
                                 .background(Brush.horizontalGradient(listOf(BentoPrimary, BentoSecondary)))
                         )
                         Text(
-                            text = "WEALTHFLOW",
+                            text = "WEALTH FLOW",
                             fontSize = 16.sp,
                             fontWeight = FontWeight.ExtraBold,
                             letterSpacing = 1.5.sp,
@@ -214,7 +216,7 @@ fun MainAppScreen(
                 // Animate back to normal scale - optimized
                 LaunchedEffect(fabScale) {
                     if (fabScale != 1f) {
-                        delay(100)
+                        delay(100) // Legacy Long overload can be converted to Duration? Wait, delay is a suspend function.
                         fabScale = 1f
                     }
                 }
@@ -252,10 +254,7 @@ fun MainAppScreen(
                     when (tab) {
                     ScreenTab.Dashboard -> DashboardScreenView(
                         transactions = transactions,
-                        budgets = budgets,
-                        goals = goals,
-                        onAddTxClick = { showAddTxDialog = true },
-                        onAddGoalClick = { showAddGoalDialog = true }
+                        onAddTxClick = { showAddTxDialog = true }
                     )
                     ScreenTab.Transactions -> TransactionsScreenView(
                         transactions = transactions,
@@ -291,6 +290,7 @@ fun MainAppScreen(
             }
         }
     }
+}
 
     // Dialogs with animations
     if (showAddTxDialog) {
@@ -379,10 +379,7 @@ fun MainAppScreen(
 @Composable
 fun DashboardScreenView(
     transactions: List<TransactionEntity>,
-    budgets: List<BudgetEntity>,
-    goals: List<GoalEntity>,
-    onAddTxClick: () -> Unit,
-    onAddGoalClick: () -> Unit
+    onAddTxClick: () -> Unit
 ) {
     val totalIncome = transactions.filter { it.type == "INCOME" }.sumOf { it.amount }
     val totalExpense = transactions.filter { it.type == "EXPENSE" }.sumOf { it.amount }
@@ -504,7 +501,7 @@ fun DashboardScreenView(
                     }
                     Column {
                         Text(
-                            text = "$${String.format("%,.2f", netWorth)}",
+                            text = "$${String.format(Locale.US, "%,.2f", netWorth)}",
                             fontSize = 32.sp,
                             fontWeight = FontWeight.Black,
                             color = Color.White
@@ -515,11 +512,11 @@ fun DashboardScreenView(
                         ) {
                             Row(verticalAlignment = Alignment.CenterVertically) {
                                 Icon(Icons.Default.ArrowUpward, contentDescription = "Income", tint = Color(0xFF81C784), modifier = Modifier.size(12.dp))
-                                Text(text = " +$${String.format("%,.0f", totalIncome)}", fontSize = 11.sp, color = Color(0xFF81C784))
+                                Text(text = " +$${String.format(Locale.US, "%,.0f", totalIncome)}", fontSize = 11.sp, color = Color(0xFF81C784))
                             }
                             Row(verticalAlignment = Alignment.CenterVertically) {
                                 Icon(Icons.Default.ArrowDownward, contentDescription = "Expense", tint = Color(0xFFE57373), modifier = Modifier.size(12.dp))
-                                Text(text = " -$${String.format("%,.0f", totalExpense)}", fontSize = 11.sp, color = Color(0xFFE57373))
+                                Text(text = " -$${String.format(Locale.US, "%,.0f", totalExpense)}", fontSize = 11.sp, color = Color(0xFFE57373))
                             }
                         }
                     }
@@ -698,7 +695,6 @@ fun DashboardScreenView(
                     }
                 }
             }
-                }
             }
         }
 
@@ -753,7 +749,7 @@ fun DashboardScreenView(
                     visible = true,
                     enter = AnimationUtils.staggeredEnter(index = index)
                 ) {
-                    TransactionRow(tx = tx, onDelete = {})
+                    TransactionRow(tx = tx)
                 }
             }
         }
@@ -861,9 +857,7 @@ fun TransactionsScreenView(
                             onDeleteTransaction(tx.id, tx.amount, tx.category, tx.type)
                         }
                     ) {
-                        TransactionRow(tx = tx, onDelete = {
-                            onDeleteTransaction(tx.id, tx.amount, tx.category, tx.type)
-                        })
+                        TransactionRow(tx = tx)
                     }
                 }
             }
@@ -872,7 +866,7 @@ fun TransactionsScreenView(
 }
 
 @Composable
-fun TransactionRow(tx: TransactionEntity, onDelete: () -> Unit) {
+fun TransactionRow(tx: TransactionEntity) {
     val isExpense = tx.type == "EXPENSE"
     val isTransfer = tx.type == "TRANSFER"
 
@@ -882,7 +876,7 @@ fun TransactionRow(tx: TransactionEntity, onDelete: () -> Unit) {
         "rent" -> Icons.Default.Home
         "shopping" -> Icons.Default.ShoppingBag
         "utilities" -> Icons.Default.ElectricalServices
-        "investments" -> Icons.Default.TrendingUp
+        "investments" -> Icons.AutoMirrored.Filled.TrendingUp
         else -> Icons.Default.AttachMoney
     }
 
@@ -938,7 +932,7 @@ fun TransactionRow(tx: TransactionEntity, onDelete: () -> Unit) {
             }
             Column(horizontalAlignment = Alignment.End) {
                 Text(
-                    text = if (isExpense) "-$${String.format("%.2f", tx.amount)}" else if (isTransfer) "$${String.format("%.2f", tx.amount)}" else "+$${String.format("%.2f", tx.amount)}",
+                    text = if (isExpense) "-$${String.format(Locale.US, "%.2f", tx.amount)}" else if (isTransfer) "$${String.format(Locale.US, "%.2f", tx.amount)}" else "+$${String.format(Locale.US, "%.2f", tx.amount)}",
                     fontSize = 15.sp,
                     fontWeight = FontWeight.Black,
                     color = iconColor
@@ -1019,7 +1013,7 @@ fun BudgetsScreenView(
                             Column {
                                 Text(text = budget.category, fontSize = 15.sp, fontWeight = FontWeight.Bold, color = MaterialTheme.colorScheme.onSurface)
                                 Text(
-                                    text = "Spent $${String.format("%.2f", budget.spentAmount)} of $${budget.limitAmount}",
+                                    text = "Spent $${String.format(Locale.US, "%.2f", budget.spentAmount)} of $${String.format(Locale.US, "%.2f", budget.limitAmount)}",
                                     fontSize = 11.sp,
                                     color = MaterialTheme.colorScheme.onSurfaceVariant.copy(alpha = 0.7f)
                                 )
@@ -1090,7 +1084,7 @@ fun BudgetsScreenView(
                             Column {
                                 Text(text = goal.name, fontSize = 15.sp, fontWeight = FontWeight.Bold, color = MaterialTheme.colorScheme.onSurface)
                                 Text(
-                                    text = "$${String.format("%,.0f", goal.currentAmount)} of $${String.format("%,.0f", goal.targetAmount)} accrued",
+                                    text = "$${String.format(Locale.US, "%,.0f", goal.currentAmount)} of $${String.format(Locale.US, "%,.0f", goal.targetAmount)} accrued",
                                     fontSize = 11.sp,
                                     color = MaterialTheme.colorScheme.onSurfaceVariant.copy(alpha = 0.7f)
                                 )
@@ -1218,7 +1212,7 @@ fun BillsScreenView(
                             )
                         }
                         Text(
-                            text = "$${String.format("%.2f", bill.amount)}",
+                            text = "$${String.format(Locale.US, "%.2f", bill.amount)}",
                             fontSize = 15.sp,
                             fontWeight = FontWeight.Black,
                             color = MaterialTheme.colorScheme.onSurface,
@@ -1314,7 +1308,7 @@ fun BillsScreenView(
                             Column {
                                 Text(text = "TOTAL BALANCE", fontSize = 9.sp, color = MaterialTheme.colorScheme.onSurfaceVariant.copy(alpha = 0.6f), letterSpacing = 1.sp)
                                 Text(
-                                    text = "$${String.format("%,.2f", debt.totalBalance)}",
+                                    text = "$${String.format(Locale.US, "%,.2f", debt.totalBalance)}",
                                     fontSize = 24.sp,
                                     fontWeight = FontWeight.Black,
                                     color = BentoError
@@ -1766,10 +1760,10 @@ fun AddDebtDialog(onDismiss: () -> Unit, onConfirm: (String, String, Double, Dou
             Button(
                 onClick = {
                     val tot = total.toDoubleOrNull() ?: 0.0
-                    val intr = interest.toDoubleOrNull() ?: 0.0
+                    val interestRate = interest.toDoubleOrNull() ?: 0.0
                     val pay = payment.toDoubleOrNull() ?: 0.0
                     if (name.isNotBlank() && tot > 0) {
-                        onConfirm(name, type, tot, intr, pay)
+                        onConfirm(name, type, tot, interestRate, pay)
                     }
                 },
                 colors = ButtonDefaults.buttonColors(containerColor = MaterialTheme.colorScheme.primary)

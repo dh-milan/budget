@@ -7,6 +7,7 @@ import okhttp3.logging.HttpLoggingInterceptor
 import okhttp3.Interceptor
 import com.example.BuildConfig
 import android.content.Context
+import android.content.SharedPreferences
 import android.util.Log
 import androidx.security.crypto.EncryptedSharedPreferences
 import androidx.security.crypto.MasterKeys

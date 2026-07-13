@@ -400,7 +400,6 @@ fun OverviewTab() {
             }
         }
     }
-}
 
 @Composable
 fun ScoreItem(label: String, score: Int, color: Color) {
