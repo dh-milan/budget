@@ -4,7 +4,7 @@ from django.utils import timezone
 from django.db.models import Sum, Count, Q
 from rest_framework.views import APIView
 from rest_framework.response import Response
-from rest_framework import status, permissions
+from rest_framework import status, permissions, serializers
 from rest_framework.parsers import MultiPartParser, FormParser
 from datetime import datetime, timedelta
 from decimal import Decimal
@@ -20,7 +20,17 @@ from .serializers import (
 from apps.authentication.models import AuditLog
 
 
-class AccountListView(APIView):
+class ClientIPMixin:
+    """Mixin to extract client IP address from request"""
+    def get_client_ip(self, request):
+        """Extract client IP address from request"""
+        x_forwarded_for = request.META.get('HTTP_X_FORWARDED_FOR')
+        if x_forwarded_for:
+            return x_forwarded_for.split(',')[0]
+        return request.META.get('REMOTE_ADDR')
+
+
+class AccountListView(ClientIPMixin, APIView):
     """List and create accounts"""
     permission_classes = [permissions.IsAuthenticated]
     
@@ -47,15 +57,9 @@ class AccountListView(APIView):
                 status=status.HTTP_201_CREATED
             )
         return Response(serializer.errors, status=status.HTTP_400_BAD_REQUEST)
-    
-    def get_client_ip(self, request):
-        x_forwarded_for = request.META.get('HTTP_X_FORWARDED_FOR')
-        if x_forwarded_for:
-            return x_forwarded_for.split(',')[0]
-        return request.META.get('REMOTE_ADDR')
 
 
-class AccountDetailView(APIView):
+class AccountDetailView(ClientIPMixin, APIView):
     """Get, update, and delete accounts"""
     permission_classes = [permissions.IsAuthenticated]
     
@@ -114,15 +118,9 @@ class AccountDetailView(APIView):
                 {"error": "Account not found"}, 
                 status=status.HTTP_404_NOT_FOUND
             )
-    
-    def get_client_ip(self, request):
-        x_forwarded_for = request.META.get('HTTP_X_FORWARDED_FOR')
-        if x_forwarded_for:
-            return x_forwarded_for.split(',')[0]
-        return request.META.get('REMOTE_ADDR')
 
 
-class TransactionListView(APIView):
+class TransactionListView(ClientIPMixin, APIView):
     """List and create transactions"""
     permission_classes = [permissions.IsAuthenticated]
     
@@ -136,7 +134,7 @@ class TransactionListView(APIView):
         limit = int(request.query_params.get('limit', 100))
         offset = int(request.query_params.get('offset', 0))
         
-        # Build query
+        # Build query with select_related to avoid N+1
         transactions = Transaction.objects.filter(
             account__user=request.user
         ).select_related('account')
@@ -178,8 +176,14 @@ class TransactionListView(APIView):
                 # Create transaction
                 tx = serializer.save(account=account)
                 
-                # Update account balance
+                # Update account balance with validation
                 if tx.type == 'EXPENSE':
+                    # Check if account has sufficient balance
+                    if account.balance - tx.amount < 0:
+                        raise serializers.ValidationError(
+                            f"Insufficient balance. Current balance: {account.balance}, "
+                            f"Transaction amount: {tx.amount}"
+                        )
                     account.balance -= tx.amount
                 elif tx.type == 'INCOME':
                     account.balance += tx.amount
@@ -202,15 +206,9 @@ class TransactionListView(APIView):
                 status=status.HTTP_201_CREATED
             )
         return Response(serializer.errors, status=status.HTTP_400_BAD_REQUEST)
-    
-    def get_client_ip(self, request):
-        x_forwarded_for = request.META.get('HTTP_X_FORWARDED_FOR')
-        if x_forwarded_for:
-            return x_forwarded_for.split(',')[0]
-        return request.META.get('REMOTE_ADDR')
 
 
-class TransactionDetailView(APIView):
+class TransactionDetailView(ClientIPMixin, APIView):
     """Get, update, and delete transactions"""
     permission_classes = [permissions.IsAuthenticated]
     
@@ -243,15 +241,23 @@ class TransactionDetailView(APIView):
                         account.balance += old_amount
                     elif old_type == 'INCOME':
                         account.balance -= old_amount
+                    # Note: TRANSFER type is handled separately in the transfer endpoint
                     
                     # Save updated transaction
                     updated_tx = serializer.save()
                     
                     # Apply new transaction effect
                     if updated_tx.type == 'EXPENSE':
+                        # Check if account has sufficient balance
+                        if account.balance - updated_tx.amount < 0:
+                            raise serializers.ValidationError(
+                                f"Insufficient balance. Current balance: {account.balance}, "
+                                f"Transaction amount: {updated_tx.amount}"
+                            )
                         account.balance -= updated_tx.amount
                     elif updated_tx.type == 'INCOME':
                         account.balance += updated_tx.amount
+                    # Note: TRANSFER type is handled separately
                     account.save()
                     
                     AuditLog.objects.create(
@@ -281,6 +287,7 @@ class TransactionDetailView(APIView):
                     account.balance += tx.amount
                 elif tx.type == 'INCOME':
                     account.balance -= tx.amount
+                # Note: TRANSFER type is handled separately
                 account.save()
                 
                 # Delete transaction
@@ -300,15 +307,9 @@ class TransactionDetailView(APIView):
                 {"error": "Transaction not found"}, 
                 status=status.HTTP_404_NOT_FOUND
             )
-    
-    def get_client_ip(self, request):
-        x_forwarded_for = request.META.get('HTTP_X_FORWARDED_FOR')
-        if x_forwarded_for:
-            return x_forwarded_for.split(',')[0]
-        return request.META.get('REMOTE_ADDR')
 
 
-class CategoryListView(APIView):
+class CategoryListView(ClientIPMixin, APIView):
     """List and create categories"""
     permission_classes = [permissions.IsAuthenticated]
     
@@ -340,15 +341,9 @@ class CategoryListView(APIView):
                 status=status.HTTP_201_CREATED
             )
         return Response(serializer.errors, status=status.HTTP_400_BAD_REQUEST)
-    
-    def get_client_ip(self, request):
-        x_forwarded_for = request.META.get('HTTP_X_FORWARDED_FOR')
-        if x_forwarded_for:
-            return x_forwarded_for.split(',')[0]
-        return request.META.get('REMOTE_ADDR')
 
 
-class TransactionSummaryView(APIView):
+class TransactionSummaryView(ClientIPMixin, APIView):
     """Get transaction summary statistics"""
     permission_classes = [permissions.IsAuthenticated]
     
@@ -367,12 +362,12 @@ class TransactionSummaryView(APIView):
             start_date = datetime.fromisoformat(start_date)
             end_date = datetime.fromisoformat(end_date)
         
-        # Build query
+        # Build query with select_related
         transactions = Transaction.objects.filter(
             account__user=request.user,
             timestamp__gte=start_date,
             timestamp__lte=end_date
-        )
+        ).select_related('account')
         
         if account_id:
             transactions = transactions.filter(account_id=account_id)
@@ -386,13 +381,13 @@ class TransactionSummaryView(APIView):
             total=Sum('amount')
         )['total'] or Decimal('0.00')
         
-        # Category breakdown
+        # Category breakdown - optimized with database aggregation
         category_breakdown = {}
-        for tx in transactions.filter(type='EXPENSE'):
-            category = tx.category
-            if category not in category_breakdown:
-                category_breakdown[category] = Decimal('0.00')
-            category_breakdown[category] += tx.amount
+        expense_transactions = transactions.filter(type='EXPENSE').values('category').annotate(
+            total=Sum('amount')
+        )
+        for item in expense_transactions:
+            category_breakdown[item['category']] = item['total']
         
         summary_data = {
             'total_income': total_income,
@@ -410,7 +405,7 @@ class TransactionSummaryView(APIView):
         return Response(serializer.data)
 
 
-class BulkTransactionCreateView(APIView):
+class BulkTransactionCreateView(ClientIPMixin, APIView):
     """Create multiple transactions at once"""
     permission_classes = [permissions.IsAuthenticated]
     
@@ -439,8 +434,14 @@ class BulkTransactionCreateView(APIView):
                         is_recurring=tx_data.get('is_recurring', False)
                     )
                     
-                    # Update account balance
+                    # Update account balance with validation
                     if tx.type == 'EXPENSE':
+                        # Check if account has sufficient balance
+                        if account.balance - tx.amount < 0:
+                            raise serializers.ValidationError(
+                                f"Insufficient balance for transaction: {tx.title}. "
+                                f"Current balance: {account.balance}, Amount: {tx.amount}"
+                            )
                         account.balance -= tx.amount
                     elif tx.type == 'INCOME':
                         account.balance += tx.amount
@@ -462,15 +463,9 @@ class BulkTransactionCreateView(APIView):
                 status=status.HTTP_201_CREATED
             )
         return Response(serializer.errors, status=status.HTTP_400_BAD_REQUEST)
-    
-    def get_client_ip(self, request):
-        x_forwarded_for = request.META.get('HTTP_X_FORWARDED_FOR')
-        if x_forwarded_for:
-            return x_forwarded_for.split(',')[0]
-        return request.META.get('REMOTE_ADDR')
 
 
-class AttachmentUploadView(APIView):
+class AttachmentUploadView(ClientIPMixin, APIView):
     """Upload attachments for transactions"""
     permission_classes = [permissions.IsAuthenticated]
     parser_classes = [MultiPartParser, FormParser]
@@ -511,12 +506,6 @@ class AttachmentUploadView(APIView):
         
         serializer = AttachmentSerializer(attachment, context={'request': request})
         return Response(serializer.data, status=status.HTTP_201_CREATED)
-    
-    def get_client_ip(self, request):
-        x_forwarded_for = request.META.get('HTTP_X_FORWARDED_FOR')
-        if x_forwarded_for:
-            return x_forwarded_for.split(',')[0]
-        return request.META.get('REMOTE_ADDR')
 
 
 class NetWorthView(APIView):
@@ -569,7 +558,7 @@ class NetWorthView(APIView):
         return Response(data)
 
 
-class CashFlowReportView(APIView):
+class CashFlowReportView(ClientIPMixin, APIView):
     """Generate cash flow reports for a date range"""
     permission_classes = [permissions.IsAuthenticated]
     
@@ -595,7 +584,7 @@ class CashFlowReportView(APIView):
             start_date = datetime.fromisoformat(start_date) if start_date else today.replace(day=1)
             end_date = datetime.fromisoformat(end_date) if end_date else today
         
-        # Get all user transactions
+        # Get all user transactions with select_related
         transactions = Transaction.objects.filter(
             account__user=request.user,
             timestamp__gte=start_date,
@@ -613,29 +602,34 @@ class CashFlowReportView(APIView):
         
         net_cash_flow = total_income - total_expenses
         
-        # Income by category
+        # Income by category - optimized with database aggregation
         income_by_category = {}
-        for tx in transactions.filter(type='INCOME'):
-            cat = tx.category
-            income_by_category[cat] = income_by_category.get(cat, Decimal('0.00')) + tx.amount
+        income_data = transactions.filter(type='INCOME').values('category').annotate(
+            total=Sum('amount')
+        )
+        for item in income_data:
+            income_by_category[item['category']] = item['total']
         
-        # Expenses by category
+        # Expenses by category - optimized with database aggregation
         expenses_by_category = {}
-        for tx in transactions.filter(type='EXPENSE'):
-            cat = tx.category
-            expenses_by_category[cat] = expenses_by_category.get(cat, Decimal('0.00')) + tx.amount
+        expense_data = transactions.filter(type='EXPENSE').values('category').annotate(
+            total=Sum('amount')
+        )
+        for item in expense_data:
+            expenses_by_category[item['category']] = item['total']
         
-        # Daily cash flow (for charting)
+        # Daily cash flow (for charting) - optimized
         daily_cash_flow = {}
-        for tx in transactions:
-            date_key = tx.timestamp.date().isoformat()
-            if date_key not in daily_cash_flow:
-                daily_cash_flow[date_key] = {'income': Decimal('0.00'), 'expenses': Decimal('0.00')}
-            
-            if tx.type == 'INCOME':
-                daily_cash_flow[date_key]['income'] += tx.amount
-            elif tx.type == 'EXPENSE':
-                daily_cash_flow[date_key]['expenses'] += tx.amount
+        daily_data = transactions.values('timestamp__date').annotate(
+            income=Sum('amount', filter=Q(type='INCOME')),
+            expenses=Sum('amount', filter=Q(type='EXPENSE'))
+        )
+        for item in daily_data:
+            date_key = item['timestamp__date'].isoformat()
+            daily_cash_flow[date_key] = {
+                'income': item['income'] or Decimal('0.00'),
+                'expenses': item['expenses'] or Decimal('0.00')
+            }
         
         data = {
             'period': period,
@@ -654,7 +648,7 @@ class CashFlowReportView(APIView):
         return Response(data)
 
 
-class TransactionSearchView(APIView):
+class TransactionSearchView(ClientIPMixin, APIView):
     """Advanced transaction search with categorization suggestions"""
     permission_classes = [permissions.IsAuthenticated]
     
@@ -665,10 +659,10 @@ class TransactionSearchView(APIView):
         if not query:
             return Response({'transactions': [], 'suggestions': []})
         
-        # Search in title, notes, tags, and category
+        # Search in title, notes, tags, and category with select_related
         transactions = Transaction.objects.filter(
             account__user=request.user
-        ).filter(
+        ).select_related('account').filter(
             Q(title__icontains=query) |
             Q(note__icontains=query) |
             Q(tags__icontains=query) |

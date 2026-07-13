@@ -3,11 +3,12 @@ package com.example.ui.screens
 import android.widget.Toast
 import androidx.activity.compose.BackHandler
 import androidx.compose.animation.*
+import androidx.compose.animation.core.*
 import androidx.compose.foundation.BorderStroke
+import androidx.compose.foundation.layout.*
 import androidx.compose.foundation.Canvas
 import androidx.compose.foundation.background
 import androidx.compose.foundation.clickable
-import androidx.compose.foundation.layout.*
 import androidx.compose.foundation.lazy.LazyColumn
 import androidx.compose.foundation.lazy.items
 import androidx.compose.foundation.shape.CircleShape
@@ -42,6 +43,7 @@ import androidx.lifecycle.compose.collectAsStateWithLifecycle
 import com.example.R
 import com.example.data.model.*
 import com.example.ui.theme.*
+import com.example.ui.theme.AnimationUtils
 import com.example.ui.viewmodel.FinanceViewModel
 import java.text.SimpleDateFormat
 import java.util.*
@@ -170,8 +172,13 @@ fun MainAppScreen(
         },
         floatingActionButton = {
             if (currentTab != ScreenTab.Assistant) {
+                var fabScale by remember { mutableFloatStateOf(1f) }
+                
                 ExtendedFloatingActionButton(
                     onClick = {
+                        // Pulse animation on click
+                        fabScale = 0.9f
+                        
                         when (currentTab) {
                             ScreenTab.Dashboard -> showAddTxDialog = true
                             ScreenTab.Transactions -> showAddTxDialog = true
@@ -197,8 +204,18 @@ fun MainAppScreen(
                             }
                         )
                     },
-                    modifier = Modifier.testTag("fab_add_action")
-                )
+                    modifier = Modifier
+                        .testTag("fab_add_action")
+                        .scale(fabScale)
+                ) {
+                    // Animate back to normal scale - optimized
+                    LaunchedEffect(fabScale) {
+                        if (fabScale != 1f) {
+                            delay(100)
+                            fabScale = 1f
+                        }
+                    }
+                }
             }
         },
         containerColor = MaterialTheme.colorScheme.background
@@ -209,17 +226,27 @@ fun MainAppScreen(
                 .padding(innerPadding)
         ) {
             if (showSettingsScreen) {
-                ProductionSettingsScreen(
-                    onNavigateBack = { showSettingsScreen = false },
-                    darkThemeEnabled = darkThemeEnabled,
-                    onDarkThemeEnabledChange = onDarkThemeEnabledChange,
-                    dynamicColorEnabled = dynamicColorEnabled,
-                    onDynamicColorEnabledChange = onDynamicColorEnabledChange,
-                    accentThemeName = accentThemeName,
-                    onAccentThemeNameChange = onAccentThemeNameChange
-                )
+                AnimatedVisibility(
+                    visible = showSettingsScreen,
+                    enter = AnimationUtils.SlideInFromRight + AnimationUtils.FadeIn,
+                    exit = AnimationUtils.SlideOutToLeft + AnimationUtils.FadeOut
+                ) {
+                    ProductionSettingsScreen(
+                        onNavigateBack = { showSettingsScreen = false },
+                        darkThemeEnabled = darkThemeEnabled,
+                        onDarkThemeEnabledChange = onDarkThemeEnabledChange,
+                        dynamicColorEnabled = dynamicColorEnabled,
+                        onDynamicColorEnabledChange = onDynamicColorEnabledChange,
+                        accentThemeName = accentThemeName,
+                        onAccentThemeNameChange = onAccentThemeNameChange
+                    )
+                }
             } else {
-                Crossfade(targetState = currentTab, label = "TabTransition") { tab ->
+                Crossfade(
+                    targetState = currentTab,
+                    animationSpec = tween(AnimationUtils.NORMAL_DURATION, easing = AnimationUtils.NormalEaseOut),
+                    label = "TabTransition"
+                ) { tab ->
                     when (tab) {
                     ScreenTab.Dashboard -> DashboardScreenView(
                         transactions = transactions,
@@ -263,55 +290,85 @@ fun MainAppScreen(
         }
     }
 
-    // Dialogs
+    // Dialogs with animations
     if (showAddTxDialog) {
-        AddTransactionDialog(
-            onDismiss = { showAddTxDialog = false },
-            onConfirm = { title, amount, category, type, note, tags ->
-                viewModel.addTransaction(title, amount, category, type, note, tags)
-                showAddTxDialog = false
-            }
-        )
+        AnimatedVisibility(
+            visible = showAddTxDialog,
+            enter = AnimationUtils.FadeIn + AnimationUtils.ScaleIn,
+            exit = AnimationUtils.FadeOut + AnimationUtils.ScaleOut
+        ) {
+            AddTransactionDialog(
+                onDismiss = { showAddTxDialog = false },
+                onConfirm = { title, amount, category, type, note, tags ->
+                    viewModel.addTransaction(title, amount, category, type, note, tags)
+                    showAddTxDialog = false
+                }
+            )
+        }
     }
 
     if (showAddBudgetDialog) {
-        AddBudgetDialog(
-            onDismiss = { showAddBudgetDialog = false },
-            onConfirm = { category, limit ->
-                viewModel.addBudget(category, limit)
-                showAddBudgetDialog = false
-            }
-        )
+        AnimatedVisibility(
+            visible = showAddBudgetDialog,
+            enter = AnimationUtils.FadeIn + AnimationUtils.ScaleIn,
+            exit = AnimationUtils.FadeOut + AnimationUtils.ScaleOut
+        ) {
+            AddBudgetDialog(
+                onDismiss = { showAddBudgetDialog = false },
+                onConfirm = { category, limit ->
+                    viewModel.addBudget(category, limit)
+                    showAddBudgetDialog = false
+                }
+            )
+        }
     }
 
     if (showAddGoalDialog) {
-        AddGoalDialog(
-            onDismiss = { showAddGoalDialog = false },
-            onConfirm = { name, target, current ->
-                viewModel.addGoal(name, target, current, System.currentTimeMillis() + (30L * 24 * 60 * 60 * 1000))
-                showAddGoalDialog = false
-            }
-        )
+        AnimatedVisibility(
+            visible = showAddGoalDialog,
+            enter = AnimationUtils.FadeIn + AnimationUtils.ScaleIn,
+            exit = AnimationUtils.FadeOut + AnimationUtils.ScaleOut
+        ) {
+            AddGoalDialog(
+                onDismiss = { showAddGoalDialog = false },
+                onConfirm = { name, target, current ->
+                    viewModel.addGoal(name, target, current, System.currentTimeMillis() + (30L * 24 * 60 * 60 * 1000))
+                    showAddGoalDialog = false
+                }
+            )
+        }
     }
 
     if (showAddDebtDialog) {
-        AddDebtDialog(
-            onDismiss = { showAddDebtDialog = false },
-            onConfirm = { name, type, total, interest, payment ->
-                viewModel.addDebt(name, type, total, interest, System.currentTimeMillis() + (30L * 24 * 60 * 60 * 1000), payment)
-                showAddDebtDialog = false
-            }
-        )
+        AnimatedVisibility(
+            visible = showAddDebtDialog,
+            enter = AnimationUtils.FadeIn + AnimationUtils.ScaleIn,
+            exit = AnimationUtils.FadeOut + AnimationUtils.ScaleOut
+        ) {
+            AddDebtDialog(
+                onDismiss = { showAddDebtDialog = false },
+                onConfirm = { name, type, total, interest, payment ->
+                    viewModel.addDebt(name, type, total, interest, System.currentTimeMillis() + (30L * 24 * 60 * 60 * 1000), payment)
+                    showAddDebtDialog = false
+                }
+            )
+        }
     }
 
     if (showAddBillDialog) {
-        AddBillDialog(
-            onDismiss = { showAddBillDialog = false },
-            onConfirm = { name, amount, category ->
-                viewModel.addBill(name, amount, System.currentTimeMillis() + (15L * 24 * 60 * 60 * 1000), category)
-                showAddBillDialog = false
-            }
-        )
+        AnimatedVisibility(
+            visible = showAddBillDialog,
+            enter = AnimationUtils.FadeIn + AnimationUtils.ScaleIn,
+            exit = AnimationUtils.FadeOut + AnimationUtils.ScaleOut
+        ) {
+            AddBillDialog(
+                onDismiss = { showAddBillDialog = false },
+                onConfirm = { name, amount, category ->
+                    viewModel.addBill(name, amount, System.currentTimeMillis() + (15L * 24 * 60 * 60 * 1000), category)
+                    showAddBillDialog = false
+                }
+            )
+        }
     }
 }
 }
@@ -338,53 +395,64 @@ fun DashboardScreenView(
     ) {
         // Premium Greeting Header Item (Bento Style)
         item {
-            Row(
-                modifier = Modifier
-                    .fillMaxWidth()
-                    .padding(vertical = 4.dp),
-                horizontalArrangement = Arrangement.SpaceBetween,
-                verticalAlignment = Alignment.CenterVertically
+            AnimatedVisibility(
+                visible = true,
+                enter = AnimationUtils.SlideInFromBottom + AnimationUtils.FadeIn,
+                initialOffsetY = { -it / 4 }
             ) {
-                Column {
-                    Text(
-                        text = "Good Morning,",
-                        fontSize = 12.sp,
-                        fontWeight = FontWeight.Medium,
-                        color = MaterialTheme.colorScheme.onSurfaceVariant.copy(alpha = 0.7f)
-                    )
-                    Text(
-                        text = "User",
-                        fontSize = 20.sp,
-                        fontWeight = FontWeight.Bold,
-                        color = MaterialTheme.colorScheme.onBackground
-                    )
-                }
-                Box(
+                Row(
                     modifier = Modifier
-                        .size(40.dp)
-                        .clip(CircleShape)
-                        .background(MaterialTheme.colorScheme.primaryContainer)
-                        .clickable { /* Profile details */ },
-                    contentAlignment = Alignment.Center
+                        .fillMaxWidth()
+                        .padding(vertical = 4.dp),
+                    horizontalArrangement = Arrangement.SpaceBetween,
+                    verticalAlignment = Alignment.CenterVertically
                 ) {
-                    Text(
-                        text = "AR",
-                        fontSize = 14.sp,
-                        fontWeight = FontWeight.Bold,
-                        color = MaterialTheme.colorScheme.onPrimaryContainer
-                    )
+                    Column {
+                        Text(
+                            text = "Good Morning,",
+                            fontSize = 12.sp,
+                            fontWeight = FontWeight.Medium,
+                            color = MaterialTheme.colorScheme.onSurfaceVariant.copy(alpha = 0.7f)
+                        )
+                        Text(
+                            text = "User",
+                            fontSize = 20.sp,
+                            fontWeight = FontWeight.Bold,
+                            color = MaterialTheme.colorScheme.onBackground
+                        )
+                    }
+                    Box(
+                        modifier = Modifier
+                            .size(40.dp)
+                            .clip(CircleShape)
+                            .background(MaterialTheme.colorScheme.primaryContainer)
+                            .clickable { /* Profile details */ },
+                        contentAlignment = Alignment.Center
+                    ) {
+                        Text(
+                            text = "AR",
+                            fontSize = 14.sp,
+                            fontWeight = FontWeight.Bold,
+                            color = MaterialTheme.colorScheme.onPrimaryContainer
+                        )
+                    }
                 }
             }
         }
 
         // Hero Card (Double-column width representation in grid style)
         item {
-            Box(
-                modifier = Modifier
-                    .fillMaxWidth()
-                    .height(180.dp)
-                    .clip(RoundedCornerShape(28.dp))
+            AnimatedVisibility(
+                visible = true,
+                enter = AnimationUtils.SlideInFromBottom + AnimationUtils.FadeIn,
+                initialOffsetY = { -it / 4 }
             ) {
+                Box(
+                    modifier = Modifier
+                        .fillMaxWidth()
+                        .height(180.dp)
+                        .clip(RoundedCornerShape(28.dp))
+                ) {
                 androidx.compose.foundation.Image(
                     painter = painterResource(id = R.drawable.img_hero_dashboard),
                     contentDescription = "Futuristic Chart Layout",
@@ -462,14 +530,19 @@ fun DashboardScreenView(
 
         // Actionable Micro-Insights Panel (Bento style AI Advice block)
         item {
-            Card(
-                colors = CardDefaults.cardColors(
-                    containerColor = MaterialTheme.colorScheme.primaryContainer
-                ),
-                shape = RoundedCornerShape(24.dp),
-                border = BorderStroke(1.dp, MaterialTheme.colorScheme.primary.copy(alpha = 0.2f)),
-                modifier = Modifier.fillMaxWidth()
+            AnimatedVisibility(
+                visible = true,
+                enter = AnimationUtils.SlideInFromBottom + AnimationUtils.FadeIn,
+                initialOffsetY = { -it / 4 }
             ) {
+                Card(
+                    colors = CardDefaults.cardColors(
+                        containerColor = MaterialTheme.colorScheme.primaryContainer
+                    ),
+                    shape = RoundedCornerShape(24.dp),
+                    border = BorderStroke(1.dp, MaterialTheme.colorScheme.primary.copy(alpha = 0.2f)),
+                    modifier = Modifier.fillMaxWidth()
+                ) {
                 Row(
                     modifier = Modifier.padding(16.dp),
                     verticalAlignment = Alignment.CenterVertically
@@ -515,12 +588,17 @@ fun DashboardScreenView(
 
         // Custom Interactive Analytics Custom Chart Drawing (Bento styled grid)
         item {
-            Card(
-                colors = CardDefaults.cardColors(containerColor = MaterialTheme.colorScheme.surface),
-                shape = RoundedCornerShape(24.dp),
-                border = BorderStroke(1.dp, MaterialTheme.colorScheme.outline.copy(alpha = 0.12f)),
-                modifier = Modifier.fillMaxWidth()
+            AnimatedVisibility(
+                visible = true,
+                enter = AnimationUtils.SlideInFromBottom + AnimationUtils.FadeIn,
+                initialOffsetY = { -it / 4 }
             ) {
+                Card(
+                    colors = CardDefaults.cardColors(containerColor = MaterialTheme.colorScheme.surface),
+                    shape = RoundedCornerShape(24.dp),
+                    border = BorderStroke(1.dp, MaterialTheme.colorScheme.outline.copy(alpha = 0.12f)),
+                    modifier = Modifier.fillMaxWidth()
+                ) {
                 Column(modifier = Modifier.padding(16.dp)) {
                     Text(
                         text = "Cash Flow Analytics",
@@ -625,29 +703,35 @@ fun DashboardScreenView(
 
         // Recent Activity Header Title
         item {
-            Row(
-                modifier = Modifier.fillMaxWidth(),
-                horizontalArrangement = Arrangement.SpaceBetween,
-                verticalAlignment = Alignment.CenterVertically
+            AnimatedVisibility(
+                visible = true,
+                enter = AnimationUtils.SlideInFromBottom + AnimationUtils.FadeIn,
+                initialOffsetY = { -it / 4 }
             ) {
-                Text(
-                    text = "Recent Transactions",
-                    fontSize = 16.sp,
-                    fontWeight = FontWeight.Bold,
-                    color = MaterialTheme.colorScheme.onBackground
-                )
-                Text(
-                    text = "See All",
-                    fontSize = 12.sp,
-                    color = MaterialTheme.colorScheme.primary,
-                    modifier = Modifier
-                        .clickable { onAddTxClick() }
-                        .padding(4.dp)
-                )
+                Row(
+                    modifier = Modifier.fillMaxWidth(),
+                    horizontalArrangement = Arrangement.SpaceBetween,
+                    verticalAlignment = Alignment.CenterVertically
+                ) {
+                    Text(
+                        text = "Recent Transactions",
+                        fontSize = 16.sp,
+                        fontWeight = FontWeight.Bold,
+                        color = MaterialTheme.colorScheme.onBackground
+                    )
+                    Text(
+                        text = "See All",
+                        fontSize = 12.sp,
+                        color = MaterialTheme.colorScheme.primary,
+                        modifier = Modifier
+                            .clickable { onAddTxClick() }
+                            .padding(4.dp)
+                    )
+                }
             }
         }
 
-        // Display up to 4 transactions on dashboard
+        // Display up to 4 transactions on dashboard with staggered animation
         val dashboardTx = transactions.take(4)
         if (dashboardTx.isEmpty()) {
             item {
@@ -661,8 +745,15 @@ fun DashboardScreenView(
                 }
             }
         } else {
-            items(dashboardTx) { tx ->
-                TransactionRow(tx = tx, onDelete = {})
+            itemsIndexed(dashboardTx) { index, tx ->
+                key(tx.id) {
+                    AnimatedVisibility(
+                        visible = true,
+                        enter = AnimationUtils.staggeredEnter(index = index)
+                    ) {
+                        TransactionRow(tx = tx, onDelete = {})
+                    }
+                }
             }
         }
     }

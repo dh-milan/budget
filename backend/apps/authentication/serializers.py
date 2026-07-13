@@ -1,6 +1,11 @@
 from rest_framework import serializers
-from rest_framework_simplejwt.serializers import TokenObtainPairSerializer
-from .models import User, UserPreferences, AuditLog, LoginHistory
+from django.contrib.auth import get_user_model
+from django.contrib.auth.tokens import default_token_generator
+from django.utils.http import urlsafe_base64_encode, urlsafe_base64_decode
+from django.utils.encoding import force_bytes, force_str
+from .models import User, UserPreferences
+
+User = get_user_model()
 
 
 class UserSerializer(serializers.ModelSerializer):
@@ -8,78 +13,88 @@ class UserSerializer(serializers.ModelSerializer):
     class Meta:
         model = User
         fields = [
-            'id', 'email', 'full_name', 'avatar_url', 
-            'is_active', 'role', 'created_at', 'updated_at'
+            'id', 'email', 'full_name', 'avatar_url', 'role',
+            'is_active', 'created_at', 'updated_at'
+        ]
+        read_only_fields = ['id', 'created_at', 'updated_at', 'role']
+
+
+class UserPreferencesSerializer(serializers.ModelSerializer):
+    """Serializer for UserPreferences model"""
+    class Meta:
+        model = UserPreferences
+        fields = [
+            'id', 'currency', 'date_format', 'theme',
+            'notifications_enabled', 'created_at', 'updated_at'
         ]
         read_only_fields = ['id', 'created_at', 'updated_at']
 
 
-class UserPreferencesSerializer(serializers.ModelSerializer):
-    """Serializer for UserPreferences"""
-    class Meta:
-        model = UserPreferences
-        fields = [
-            'currency', 'dark_mode', 'biometrics_enabled',
-            'notification_email', 'notification_push', 'updated_at'
-        ]
-
-
-class AuditLogSerializer(serializers.ModelSerializer):
-    """Serializer for AuditLog"""
-    user_email = serializers.CharField(source='user.email', read_only=True)
-    
-    class Meta:
-        model = AuditLog
-        fields = ['id', 'user_email', 'action', 'ip_address', 'payload', 'created_at']
-        read_only_fields = fields
-
-
-class LoginHistorySerializer(serializers.ModelSerializer):
-    """Serializer for LoginHistory"""
-    user_email = serializers.CharField(source='user.email', read_only=True)
-    
-    class Meta:
-        model = LoginHistory
-        fields = [
-            'id', 'user_email', 'login_time', 'logout_time',
-            'ip_address', 'device_info'
-        ]
-        read_only_fields = fields
-
-
 class GoogleAuthSerializer(serializers.Serializer):
     """Serializer for Google OAuth2 authentication"""
-    id_token = serializers.CharField(required=True, help_text="Google ID Token from client")
+    id_token = serializers.CharField()
 
 
-class CustomTokenObtainPairSerializer(TokenObtainPairSerializer):
-    """Custom JWT token serializer with additional user data"""
-    @classmethod
-    def get_token(cls, user):
-        token = super().get_token(user)
-        # Add custom claims
-        token['email'] = user.email
-        token['full_name'] = user.full_name
-        token['role'] = user.role
-        return token
-    
+class PasswordResetRequestSerializer(serializers.Serializer):
+    """Serializer for password reset request"""
+    email = serializers.EmailField()
+
+    def validate_email(self, value):
+        try:
+            User.objects.get(email=value)
+        except User.DoesNotExist:
+            # Don't reveal if email exists or not
+            pass
+        return value
+
+
+class PasswordResetConfirmSerializer(serializers.Serializer):
+    """Serializer for password reset confirmation"""
+    uid = serializers.CharField()
+    token = serializers.CharField()
+    new_password = serializers.CharField(write_only=True, min_length=8)
+    new_password_confirm = serializers.CharField(write_only=True)
+
     def validate(self, attrs):
-        data = super().validate(attrs)
-        data['user'] = {
-            'id': str(self.user.id),
-            'email': self.user.email,
-            'full_name': self.user.full_name,
-            'avatar_url': self.user.avatar_url,
-            'role': self.user.role,
-        }
-        return data
+        if attrs['new_password'] != attrs['new_password_confirm']:
+            raise serializers.ValidationError("Passwords do not match")
+        return attrs
+
+    def validate_new_password(self, value):
+        # Django's password validators will be applied automatically
+        return value
 
 
-class TokenRefreshSerializer(serializers.Serializer):
-    """Serializer for token refresh"""
-    refresh = serializers.CharField(required=True)
+class EmailVerificationSerializer(serializers.Serializer):
+    """Serializer for email verification"""
+    token = serializers.CharField()
 
 
-class TokenVerifySerializer(serializers.Serializer):
-    """Serializer for token verification"""
-    token = serializers.CharField(required=True)
+class UserRegistrationSerializer(serializers.ModelSerializer):
+    """Serializer for user registration"""
+    password = serializers.CharField(write_only=True, min_length=8)
+    password_confirm = serializers.CharField(write_only=True)
+
+    class Meta:
+        model = User
+        fields = [
+            'email', 'full_name', 'password', 'password_confirm'
+        ]
+
+    def validate(self, attrs):
+        if attrs['password'] != attrs['password_confirm']:
+            raise serializers.ValidationError("Passwords do not match")
+        return attrs
+
+    def create(self, validated_data):
+        validated_data.pop('password_confirm')
+        password = validated_data.pop('password')
+        user = User.objects.create(
+            **validated_data,
+            google_subject_id=f"email_{validated_data['email']}",
+            role='USER',
+            is_active=True  # Set to False if email verification is required
+        )
+        user.set_password(password)
+        user.save()
+        return user

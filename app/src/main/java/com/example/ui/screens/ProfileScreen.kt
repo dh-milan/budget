@@ -1,5 +1,6 @@
 package com.example.ui.screens
 
+import androidx.compose.animation.*
 import androidx.compose.foundation.BorderStroke
 import androidx.compose.foundation.background
 import androidx.compose.foundation.layout.*
@@ -21,6 +22,7 @@ import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.unit.dp
 import androidx.compose.ui.unit.sp
 import com.example.ui.theme.*
+import com.example.ui.theme.AnimationUtils
 
 @OptIn(ExperimentalMaterial3Api::class)
 @Composable
@@ -29,6 +31,11 @@ fun ProfileScreen(
     onLogout: () -> Unit
 ) {
     var showLogoutDialog by remember { mutableStateOf(false) }
+    var startAnimation by remember { mutableStateOf(false) }
+
+    LaunchedEffect(Unit) {
+        startAnimation = true
+    }
 
     Column(
         modifier = Modifier
@@ -37,225 +44,247 @@ fun ProfileScreen(
             .verticalScroll(rememberScrollState())
     ) {
         // Profile Header
-        Box(
-            modifier = Modifier
-                .fillMaxWidth()
-                .height(200.dp)
-                .background(
-                    Brush.verticalGradient(
-                        colors = listOf(BentoPrimary, BentoSecondary)
-                    )
-                )
+        AnimatedVisibility(
+            visible = startAnimation,
+            enter = AnimationUtils.FadeIn + AnimationUtils.ScaleIn,
+            initialScale = 0.9f
         ) {
-            Column(
+            Box(
                 modifier = Modifier
-                    .fillMaxSize()
-                    .padding(32.dp),
-                verticalArrangement = Arrangement.Center,
-                horizontalAlignment = Alignment.CenterHorizontally
+                    .fillMaxWidth()
+                    .height(200.dp)
+                    .background(
+                        Brush.verticalGradient(
+                            colors = listOf(BentoPrimary, BentoSecondary)
+                        )
+                    )
             ) {
-                Box(
+                Column(
                     modifier = Modifier
-                        .size(100.dp)
-                        .clip(CircleShape)
-                        .background(Color.White.copy(alpha = 0.2f)),
-                    contentAlignment = Alignment.Center
+                        .fillMaxSize()
+                        .padding(32.dp),
+                    verticalArrangement = Arrangement.Center,
+                    horizontalAlignment = Alignment.CenterHorizontally
                 ) {
+                    Box(
+                        modifier = Modifier
+                            .size(100.dp)
+                            .clip(CircleShape)
+                            .background(Color.White.copy(alpha = 0.2f)),
+                        contentAlignment = Alignment.Center
+                    ) {
+                        Text(
+                            text = "AR",
+                            fontSize = 36.sp,
+                            fontWeight = FontWeight.ExtraBold,
+                            color = Color.White
+                        )
+                    }
+                    Spacer(modifier = Modifier.height(12.dp))
                     Text(
-                        text = "AR",
-                        fontSize = 36.sp,
-                        fontWeight = FontWeight.ExtraBold,
+                        text = "User",
+                        fontSize = 22.sp,
+                        fontWeight = FontWeight.Bold,
                         color = Color.White
                     )
+                    Text(
+                        text = "user@example.com",
+                        fontSize = 14.sp,
+                        color = Color.White.copy(alpha = 0.9f),
+                        modifier = Modifier.padding(top = 4.dp)
+                    )
                 }
-                Spacer(modifier = Modifier.height(12.dp))
-                Text(
-                    text = "User",
-                    fontSize = 22.sp,
-                    fontWeight = FontWeight.Bold,
-                    color = Color.White
-                )
-                Text(
-                    text = "user@example.com",
-                    fontSize = 14.sp,
-                    color = Color.White.copy(alpha = 0.9f),
-                    modifier = Modifier.padding(top = 4.dp)
-                )
             }
         }
 
         // Stats Cards
-        Column(
-            modifier = Modifier
-                .fillMaxWidth()
-                .padding(16.dp),
-            verticalArrangement = Arrangement.spacedBy(12.dp)
+        AnimatedVisibility(
+            visible = startAnimation,
+            enter = AnimationUtils.SlideInFromBottom + AnimationUtils.FadeIn
         ) {
-            Row(
-                modifier = Modifier.fillMaxWidth(),
-                horizontalArrangement = Arrangement.spacedBy(12.dp)
+            Column(
+                modifier = Modifier
+                    .fillMaxWidth()
+                    .padding(16.dp),
+                verticalArrangement = Arrangement.spacedBy(12.dp)
             ) {
-                ProfileStatCard(
-                    title = "Accounts",
-                    value = "5",
-                    icon = Icons.Default.AccountBalance,
-                    modifier = Modifier.weight(1f)
-                )
-                ProfileStatCard(
-                    title = "Transactions",
-                    value = "1,234",
-                    icon = Icons.Default.ReceiptLong,
-                    modifier = Modifier.weight(1f)
-                )
-            }
+                Row(
+                    modifier = Modifier.fillMaxWidth(),
+                    horizontalArrangement = Arrangement.spacedBy(12.dp)
+                ) {
+                    ProfileStatCard(
+                        title = "Accounts",
+                        value = "5",
+                        icon = Icons.Default.AccountBalance,
+                        modifier = Modifier.weight(1f)
+                    )
+                    ProfileStatCard(
+                        title = "Transactions",
+                        value = "1,234",
+                        icon = Icons.Default.ReceiptLong,
+                        modifier = Modifier.weight(1f)
+                    )
+                }
 
-            Row(
-                modifier = Modifier.fillMaxWidth(),
-                horizontalArrangement = Arrangement.spacedBy(12.dp)
-            ) {
-                ProfileStatCard(
-                    title = "Budgets",
-                    value = "8",
-                    icon = Icons.Default.PieChart,
-                    modifier = Modifier.weight(1f)
-                )
-                ProfileStatCard(
-                    title = "Goals",
-                    value = "3",
-                    icon = Icons.Default.Star,
-                    modifier = Modifier.weight(1f)
-                )
+                Row(
+                    modifier = Modifier.fillMaxWidth(),
+                    horizontalArrangement = Arrangement.spacedBy(12.dp)
+                ) {
+                    ProfileStatCard(
+                        title = "Budgets",
+                        value = "8",
+                        icon = Icons.Default.PieChart,
+                        modifier = Modifier.weight(1f)
+                    )
+                    ProfileStatCard(
+                        title = "Goals",
+                        value = "3",
+                        icon = Icons.Default.Star,
+                        modifier = Modifier.weight(1f)
+                    )
+                }
             }
         }
 
         // Menu Options
-        Column(
-            modifier = Modifier
-                .fillMaxWidth()
-                .padding(horizontal = 16.dp),
-            verticalArrangement = Arrangement.spacedBy(8.dp)
+        AnimatedVisibility(
+            visible = startAnimation,
+            enter = AnimationUtils.SlideInFromBottom + AnimationUtils.FadeIn
         ) {
-            Text(
-                text = "Account Settings",
-                fontSize = 12.sp,
-                fontWeight = FontWeight.Bold,
-                color = MaterialTheme.colorScheme.primary,
-                letterSpacing = 1.sp,
-                modifier = Modifier.padding(start = 8.dp, top = 8.dp, bottom = 8.dp)
-            )
-
-            ProfileMenuItem(
-                icon = Icons.Default.Settings,
-                title = "Settings",
-                subtitle = "App preferences and configuration",
-                onClick = onNavigateToSettings
-            )
-
-            ProfileMenuItem(
-                icon = Icons.Default.Security,
-                title = "Security",
-                subtitle = "Password and authentication",
-                onClick = { /* TODO: Navigate to security */ }
-            )
-
-            ProfileMenuItem(
-                icon = Icons.Default.Notifications,
-                title = "Notifications",
-                subtitle = "Manage alerts and reminders",
-                onClick = { /* TODO: Navigate to notifications */ }
-            )
-
-            ProfileMenuItem(
-                icon = Icons.Default.CloudUpload,
-                title = "Backup & Sync",
-                subtitle = "Cloud backup and data sync",
-                onClick = { /* TODO: Navigate to backup */ }
-            )
-
-            ProfileMenuItem(
-                icon = Icons.Default.Help,
-                title = "Help & Support",
-                subtitle = "FAQs and contact support",
-                onClick = { /* TODO: Navigate to help */ }
-            )
-
-            ProfileMenuItem(
-                icon = Icons.Default.Info,
-                title = "About",
-                subtitle = "Version 1.0.0",
-                onClick = { /* TODO: Navigate to about */ }
-            )
-
-            Spacer(modifier = Modifier.height(16.dp))
-
-            // Logout Button
-            Button(
-                onClick = { showLogoutDialog = true },
+            Column(
                 modifier = Modifier
                     .fillMaxWidth()
-                    .height(56.dp),
-                shape = RoundedCornerShape(16.dp),
-                colors = ButtonDefaults.buttonColors(
-                    containerColor = BentoError.copy(alpha = 0.1f),
-                    contentColor = BentoError
-                )
+                    .padding(horizontal = 16.dp),
+                verticalArrangement = Arrangement.spacedBy(8.dp)
             ) {
-                Icon(
-                    imageVector = Icons.Default.ExitToApp,
-                    contentDescription = "Logout",
-                    modifier = Modifier.size(20.dp)
+                Text(
+                    text = "Account Settings",
+                    fontSize = 12.sp,
+                    fontWeight = FontWeight.Bold,
+                    color = MaterialTheme.colorScheme.primary,
+                    letterSpacing = 1.sp,
+                    modifier = Modifier.padding(start = 8.dp, top = 8.dp, bottom = 8.dp)
                 )
-                Spacer(modifier = Modifier.width(12.dp))
-                Text("Logout", fontSize = 16.sp, fontWeight = FontWeight.Bold)
-            }
 
-            Spacer(modifier = Modifier.height(16.dp))
+                ProfileMenuItem(
+                    icon = Icons.Default.Settings,
+                    title = "Settings",
+                    subtitle = "App preferences and configuration",
+                    onClick = onNavigateToSettings
+                )
+
+                ProfileMenuItem(
+                    icon = Icons.Default.Security,
+                    title = "Security",
+                    subtitle = "Password and authentication",
+                    onClick = { /* TODO: Navigate to security */ }
+                )
+
+                ProfileMenuItem(
+                    icon = Icons.Default.Notifications,
+                    title = "Notifications",
+                    subtitle = "Manage alerts and reminders",
+                    onClick = { /* TODO: Navigate to notifications */ }
+                )
+
+                ProfileMenuItem(
+                    icon = Icons.Default.CloudUpload,
+                    title = "Backup & Sync",
+                    subtitle = "Cloud backup and data sync",
+                    onClick = { /* TODO: Navigate to backup */ }
+                )
+
+                ProfileMenuItem(
+                    icon = Icons.Default.Help,
+                    title = "Help & Support",
+                    subtitle = "FAQs and contact support",
+                    onClick = { /* TODO: Navigate to help */ }
+                )
+
+                ProfileMenuItem(
+                    icon = Icons.Default.Info,
+                    title = "About",
+                    subtitle = "Version 1.0.0",
+                    onClick = { /* TODO: Navigate to about */ }
+                )
+
+                Spacer(modifier = Modifier.height(16.dp))
+
+                // Logout Button
+                Button(
+                    onClick = { showLogoutDialog = true },
+                    modifier = Modifier
+                        .fillMaxWidth()
+                        .height(56.dp),
+                    shape = RoundedCornerShape(16.dp),
+                    colors = ButtonDefaults.buttonColors(
+                        containerColor = BentoError.copy(alpha = 0.1f),
+                        contentColor = BentoError
+                    )
+                ) {
+                    Icon(
+                        imageVector = Icons.Default.ExitToApp,
+                        contentDescription = "Logout",
+                        modifier = Modifier.size(20.dp)
+                    )
+                    Spacer(modifier = Modifier.width(12.dp))
+                    Text("Logout", fontSize = 16.sp, fontWeight = FontWeight.Bold)
+                }
+
+                Spacer(modifier = Modifier.height(16.dp))
+            }
         }
     }
 
     // Logout Confirmation Dialog
     if (showLogoutDialog) {
-        AlertDialog(
-            onDismissRequest = { showLogoutDialog = false },
-            icon = {
-                Icon(
-                    imageVector = Icons.Default.ExitToApp,
-                    contentDescription = "Logout",
-                    tint = BentoError,
-                    modifier = Modifier.size(48.dp)
-                )
-            },
-            title = {
-                Text(
-                    text = "Logout?",
-                    fontWeight = FontWeight.Bold,
-                    fontSize = 20.sp
-                )
-            },
-            text = {
-                Text(
-                    text = "Are you sure you want to logout from your account?",
-                    fontSize = 14.sp,
-                    color = MaterialTheme.colorScheme.onSurfaceVariant
-                )
-            },
-            confirmButton = {
-                Button(
-                    onClick = {
-                        showLogoutDialog = false
-                        onLogout()
-                    },
-                    colors = ButtonDefaults.buttonColors(containerColor = BentoError)
-                ) {
-                    Text("Logout")
+        AnimatedVisibility(
+            visible = showLogoutDialog,
+            enter = AnimationUtils.FadeIn + AnimationUtils.ScaleIn,
+            exit = AnimationUtils.FadeOut + AnimationUtils.ScaleOut
+        ) {
+            AlertDialog(
+                onDismissRequest = { showLogoutDialog = false },
+                icon = {
+                    Icon(
+                        imageVector = Icons.Default.ExitToApp,
+                        contentDescription = "Logout",
+                        tint = BentoError,
+                        modifier = Modifier.size(48.dp)
+                    )
+                },
+                title = {
+                    Text(
+                        text = "Logout?",
+                        fontWeight = FontWeight.Bold,
+                        fontSize = 20.sp
+                    )
+                },
+                text = {
+                    Text(
+                        text = "Are you sure you want to logout from your account?",
+                        fontSize = 14.sp,
+                        color = MaterialTheme.colorScheme.onSurfaceVariant
+                    )
+                },
+                confirmButton = {
+                    Button(
+                        onClick = {
+                            showLogoutDialog = false
+                            onLogout()
+                        },
+                        colors = ButtonDefaults.buttonColors(containerColor = BentoError)
+                    ) {
+                        Text("Logout")
+                    }
+                },
+                dismissButton = {
+                    TextButton(onClick = { showLogoutDialog = false }) {
+                        Text("Cancel", color = MaterialTheme.colorScheme.onSurfaceVariant)
+                    }
                 }
-            },
-            dismissButton = {
-                TextButton(onClick = { showLogoutDialog = false }) {
-                    Text("Cancel", color = MaterialTheme.colorScheme.onSurfaceVariant)
-                }
-            }
-        )
+            )
+        }
     }
 }
 

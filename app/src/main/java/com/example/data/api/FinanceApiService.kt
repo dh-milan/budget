@@ -5,6 +5,7 @@ import retrofit2.http.POST
 import retrofit2.http.Body
 import retrofit2.http.Path
 import retrofit2.http.Header
+import retrofit2.Response
 import com.squareup.moshi.JsonClass
 
 // Network Models
@@ -61,6 +62,27 @@ data class UserData(
     val is_new_user: Boolean
 )
 
+@JsonClass(generateAdapter = true)
+data class GenerateReportRequest(
+    val report_type: String,
+    val start_date: String,
+    val end_date: String,
+    val file_format: String = "CSV"
+)
+
+@JsonClass(generateAdapter = true)
+data class ReportResponse(
+    val id: String,
+    val report_type: String,
+    val title: String,
+    val start_date: String,
+    val end_date: String,
+    val file_format: String,
+    val file_url: String?,
+    val is_generated: Boolean,
+    val generated_at: String?
+)
+
 interface FinanceApiService {
     // Auth
     @POST("auth/login/")
@@ -77,4 +99,14 @@ interface FinanceApiService {
     suspend fun createTransaction(
         @Body transaction: CreateTransactionRequest
     ): NetworkTransaction
+
+    // Reports
+    @GET("analytics/reports/")
+    suspend fun getReports(): List<ReportResponse>
+
+    @POST("analytics/reports/generate_report/")
+    suspend fun generateReport(@Body request: GenerateReportRequest): ReportResponse
+
+    @GET("analytics/reports/{reportId}/download/")
+    suspend fun downloadReport(@Path("reportId") reportId: String): Response<okhttp3.ResponseBody>
 }

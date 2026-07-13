@@ -3,6 +3,7 @@ from django.db import models
 from django.conf import settings
 from django.utils import timezone
 from decimal import Decimal
+from django.core.validators import MinValueValidator
 
 
 class Account(models.Model):
@@ -20,12 +21,17 @@ class Account(models.Model):
     id = models.UUIDField(primary_key=True, default=uuid.uuid4, editable=False)
     user = models.ForeignKey(
         settings.AUTH_USER_MODEL, 
-        on_delete=models.CASCADE, 
+        on_delete=models.PROTECT,  # Changed from CASCADE to PROTECT
         related_name='accounts'
     )
     name = models.CharField(max_length=100)
     type = models.CharField(max_length=50, choices=ACCOUNT_TYPES)
-    balance = models.DecimalField(max_digits=15, decimal_places=2, default=Decimal('0.00'))
+    balance = models.DecimalField(
+        max_digits=15, 
+        decimal_places=2, 
+        default=Decimal('0.00'),
+        validators=[MinValueValidator(Decimal('0.00'))]  # Prevent negative balance
+    )
     currency = models.CharField(max_length=3, default='USD')
     is_active = models.BooleanField(default=True)
     created_at = models.DateTimeField(default=timezone.now)
@@ -36,6 +42,7 @@ class Account(models.Model):
         indexes = [
             models.Index(fields=['user', 'type']),
             models.Index(fields=['user', 'is_active']),
+            models.Index(fields=['user', 'balance']),  # Added for balance queries
         ]
         ordering = ['-created_at']
     
@@ -54,11 +61,15 @@ class Transaction(models.Model):
     id = models.UUIDField(primary_key=True, default=uuid.uuid4, editable=False)
     account = models.ForeignKey(
         Account, 
-        on_delete=models.CASCADE, 
+        on_delete=models.PROTECT,  # Changed from CASCADE to PROTECT - preserve transaction history
         related_name='transactions'
     )
     title = models.CharField(max_length=150)
-    amount = models.DecimalField(max_digits=15, decimal_places=2)
+    amount = models.DecimalField(
+        max_digits=15, 
+        decimal_places=2,
+        validators=[MinValueValidator(Decimal('0.01'))]  # Amount must be positive
+    )
     category = models.CharField(max_length=100, db_index=True)
     type = models.CharField(max_length=20, choices=TRANSACTION_TYPES, db_index=True)
     timestamp = models.DateTimeField(db_index=True)
@@ -74,9 +85,11 @@ class Transaction(models.Model):
         indexes = [
             models.Index(fields=['account', 'timestamp']),
             models.Index(fields=['account', 'category']),
+            models.Index(fields=['account', 'type']),  # Added composite index
             models.Index(fields=['timestamp']),
             models.Index(fields=['category']),
             models.Index(fields=['type']),
+            models.Index(fields=['user', 'timestamp']),  # Added for user transaction queries
         ]
         ordering = ['-timestamp']
     
@@ -129,12 +142,15 @@ class Attachment(models.Model):
     id = models.UUIDField(primary_key=True, default=uuid.uuid4, editable=False)
     transaction = models.ForeignKey(
         Transaction, 
-        on_delete=models.CASCADE, 
+        on_delete=models.CASCADE,  # Keep CASCADE - attachments should be deleted with transaction
         related_name='attachments'
     )
     file = models.FileField(upload_to='attachments/%Y/%m/%d/')
     file_type = models.CharField(max_length=50, help_text="MIME type or file extension")
-    file_size = models.IntegerField(help_text="File size in bytes")
+    file_size = models.IntegerField(
+        help_text="File size in bytes",
+        validators=[MinValueValidator(1)]  # File size must be positive
+    )
     uploaded_at = models.DateTimeField(default=timezone.now)
     
     class Meta:

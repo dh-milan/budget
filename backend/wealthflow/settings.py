@@ -139,6 +139,7 @@ REST_FRAMEWORK = {
         'anon': '100/day',
         'user': '1000/hour',
         'ai_copilot': '50/hour',
+        'auth': '5/minute',  # Rate limit for authentication endpoints
     },
     'DEFAULT_RENDERER_CLASSES': [
         'rest_framework.renderers.JSONRenderer',
@@ -149,6 +150,7 @@ REST_FRAMEWORK = {
         'rest_framework.parsers.FormParser',
     ],
     'EXCEPTION_HANDLER': 'rest_framework.views.exception_handler',
+    'DEFAULT_SCHEMA_CLASS': 'drf_spectacular.openapi.AutoSchema',
 }
 
 # JWT Configuration
@@ -187,27 +189,40 @@ STRIPE_WEBHOOK_SECRET = os.environ.get('STRIPE_WEBHOOK_SECRET', '')
 GEMINI_API_KEY = os.environ.get('GEMINI_API_KEY', '')
 
 # CORS Configuration
-CORS_ALLOWED_ORIGINS = [
-    "http://localhost:3000",
-    "http://localhost:8080",
-    "http://localhost:8000",
-    "http://192.168.1.68:8000",  # Android app local network access
-    "https://wealthflow.app",
-    "https://admin.wealthflow.app",
-]
+# In production, use environment-specific origins
+if DEBUG:
+    CORS_ALLOWED_ORIGINS = [
+        "http://localhost:3000",
+        "http://localhost:8080",
+        "http://localhost:8000",
+        "http://192.168.1.68:8000",  # Android app local network access
+    ]
+else:
+    CORS_ALLOWED_ORIGINS = [
+        "https://wealthflow.app",
+        "https://admin.wealthflow.app",
+        "https://api.wealthflow.app",
+    ]
 
-CORS_ALLOW_CREDENTIALS = True
+# Only allow credentials in production with specific origins
+CORS_ALLOW_CREDENTIALS = not DEBUG
 
 # Security Settings
-SECURE_SSL_REDIRECT = os.environ.get('SECURE_SSL_REDIRECT', 'False') == 'True'
-SESSION_COOKIE_SECURE = os.environ.get('SESSION_COOKIE_SECURE', 'False') == 'True'
-CSRF_COOKIE_SECURE = os.environ.get('CSRF_COOKIE_SECURE', 'False') == 'True'
+# Always enable security headers, even in development
 SECURE_BROWSER_XSS_FILTER = True
 SECURE_CONTENT_TYPE_NOSNIFF = True
 X_FRAME_OPTIONS = 'DENY'
+
+# SSL/TLS settings - enable in production
+SECURE_SSL_REDIRECT = os.environ.get('SECURE_SSL_REDIRECT', 'False') == 'True'
+SESSION_COOKIE_SECURE = os.environ.get('SESSION_COOKIE_SECURE', 'False') == 'True'
+CSRF_COOKIE_SECURE = os.environ.get('CSRF_COOKIE_SECURE', 'False') == 'True'
 SECURE_HSTS_SECONDS = 31536000 if not DEBUG else 0
 SECURE_HSTS_INCLUDE_SUBDOMAINS = not DEBUG
 SECURE_HSTS_PRELOAD = not DEBUG
+
+# Additional security headers
+SECURE_REFERRER_POLICY = 'strict-origin-when-cross-origin'
 
 # Internationalization
 LANGUAGE_CODE = 'en-us'

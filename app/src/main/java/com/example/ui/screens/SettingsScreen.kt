@@ -1,5 +1,6 @@
 package com.example.ui.screens
 
+import androidx.compose.animation.*
 import androidx.compose.foundation.background
 import androidx.compose.foundation.border
 import androidx.compose.foundation.layout.*
@@ -20,6 +21,7 @@ import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.unit.dp
 import androidx.compose.ui.unit.sp
 import com.example.ui.theme.*
+import com.example.ui.theme.AnimationUtils
 
 @OptIn(ExperimentalMaterial3Api::class)
 @Composable
@@ -31,6 +33,11 @@ fun SettingsScreen(
     var biometricEnabled by remember { mutableStateOf(false) }
     var currency by remember { mutableStateOf("USD") }
     var language by remember { mutableStateOf("English") }
+    var startAnimation by remember { mutableStateOf(false) }
+
+    LaunchedEffect(Unit) {
+        startAnimation = true
+    }
 
     Column(
         modifier = Modifier
@@ -39,241 +46,271 @@ fun SettingsScreen(
             .verticalScroll(rememberScrollState())
     ) {
         // Header
-        Row(
-            modifier = Modifier
-                .fillMaxWidth()
-                .padding(16.dp),
-            verticalAlignment = Alignment.CenterVertically
-        ) {
-            IconButton(onClick = onNavigateBack) {
-                Icon(
-                    imageVector = Icons.Default.ArrowBack,
-                    contentDescription = "Back",
-                    tint = MaterialTheme.colorScheme.onBackground
-                )
-            }
-            Spacer(modifier = Modifier.width(8.dp))
-            Text(
-                text = "Settings",
-                fontSize = 24.sp,
-                fontWeight = FontWeight.Bold,
-                color = MaterialTheme.colorScheme.onBackground
-            )
-        }
-
-        // Profile Section
-        Card(
-            modifier = Modifier
-                .fillMaxWidth()
-                .padding(horizontal = 16.dp, vertical = 8.dp),
-            shape = RoundedCornerShape(20.dp),
-            border = BorderStroke(1.dp, MaterialTheme.colorScheme.outline.copy(alpha = 0.1f)),
-            colors = CardDefaults.cardColors(containerColor = MaterialTheme.colorScheme.surface)
+        AnimatedVisibility(
+            visible = startAnimation,
+            enter = AnimationUtils.SlideInFromBottom + AnimationUtils.FadeIn
         ) {
             Row(
                 modifier = Modifier
                     .fillMaxWidth()
-                    .padding(20.dp),
+                    .padding(16.dp),
                 verticalAlignment = Alignment.CenterVertically
             ) {
-                Box(
-                    modifier = Modifier
-                        .size(60.dp)
-                        .clip(RoundedCornerShape(16.dp))
-                        .background(
-                            Brush.linearGradient(
-                                colors = listOf(BentoPrimary, BentoSecondary)
-                            )
-                        ),
-                    contentAlignment = Alignment.Center
-                ) {
-                    Text(
-                        text = "AR",
-                        fontSize = 24.sp,
-                        fontWeight = FontWeight.ExtraBold,
-                        color = Color.White
+                IconButton(onClick = onNavigateBack) {
+                    Icon(
+                        imageVector = Icons.Default.ArrowBack,
+                        contentDescription = "Back",
+                        tint = MaterialTheme.colorScheme.onBackground
                     )
                 }
-                Spacer(modifier = Modifier.width(16.dp))
-                Column(modifier = Modifier.weight(1f)) {
-                    Text(
-                        text = "User",
-                        fontSize = 18.sp,
-                        fontWeight = FontWeight.Bold,
-                        color = MaterialTheme.colorScheme.onSurface
-                    )
-                    Text(
-                        text = "user@example.com",
-                        fontSize = 13.sp,
-                        color = MaterialTheme.colorScheme.onSurfaceVariant,
-                        modifier = Modifier.padding(top = 2.dp)
-                    )
-                }
-                Icon(
-                    imageVector = Icons.Default.ChevronRight,
-                    contentDescription = "Edit Profile",
-                    tint = MaterialTheme.colorScheme.onSurfaceVariant.copy(alpha = 0.5f)
+                Spacer(modifier = Modifier.width(8.dp))
+                Text(
+                    text = "Settings",
+                    fontSize = 24.sp,
+                    fontWeight = FontWeight.Bold,
+                    color = MaterialTheme.colorScheme.onBackground
                 )
             }
         }
 
-        // Preferences Section
-        Column(
-            modifier = Modifier
-                .fillMaxWidth()
-                .padding(horizontal = 16.dp, vertical = 8.dp),
-            verticalArrangement = Arrangement.spacedBy(8.dp)
+        // Profile Section
+        AnimatedVisibility(
+            visible = startAnimation,
+            enter = AnimationUtils.SlideInFromBottom + AnimationUtils.FadeIn
         ) {
-            Text(
-                text = "PREFERENCES",
-                fontSize = 12.sp,
-                fontWeight = FontWeight.Bold,
-                color = MaterialTheme.colorScheme.primary,
-                letterSpacing = 1.sp,
-                modifier = Modifier.padding(start = 8.dp, top = 8.dp)
-            )
+            Card(
+                modifier = Modifier
+                    .fillMaxWidth()
+                    .padding(horizontal = 16.dp, vertical = 8.dp),
+                shape = RoundedCornerShape(20.dp),
+                border = BorderStroke(1.dp, MaterialTheme.colorScheme.outline.copy(alpha = 0.1f)),
+                colors = CardDefaults.cardColors(containerColor = MaterialTheme.colorScheme.surface)
+            ) {
+                Row(
+                    modifier = Modifier
+                        .fillMaxWidth()
+                        .padding(20.dp),
+                    verticalAlignment = Alignment.CenterVertically
+                ) {
+                    Box(
+                        modifier = Modifier
+                            .size(60.dp)
+                            .clip(RoundedCornerShape(16.dp))
+                            .background(
+                                Brush.linearGradient(
+                                    colors = listOf(BentoPrimary, BentoSecondary)
+                                )
+                            ),
+                        contentAlignment = Alignment.Center
+                    ) {
+                        Text(
+                            text = "AR",
+                            fontSize = 24.sp,
+                            fontWeight = FontWeight.ExtraBold,
+                            color = Color.White
+                        )
+                    }
+                    Spacer(modifier = Modifier.width(16.dp))
+                    Column(modifier = Modifier.weight(1f)) {
+                        Text(
+                            text = "User",
+                            fontSize = 18.sp,
+                            fontWeight = FontWeight.Bold,
+                            color = MaterialTheme.colorScheme.onSurface
+                        )
+                        Text(
+                            text = "user@example.com",
+                            fontSize = 13.sp,
+                            color = MaterialTheme.colorScheme.onSurfaceVariant,
+                            modifier = Modifier.padding(top = 2.dp)
+                        )
+                    }
+                    Icon(
+                        imageVector = Icons.Default.ChevronRight,
+                        contentDescription = "Edit Profile",
+                        tint = MaterialTheme.colorScheme.onSurfaceVariant.copy(alpha = 0.5f)
+                    )
+                }
+            }
+        }
 
-            SettingsSwitchItem(
-                icon = Icons.Default.DarkMode,
-                title = "Dark Mode",
-                subtitle = "Enable dark theme",
-                checked = darkMode,
-                onCheckedChange = { darkMode = it }
-            )
+        // Preferences Section
+        AnimatedVisibility(
+            visible = startAnimation,
+            enter = AnimationUtils.SlideInFromBottom + AnimationUtils.FadeIn
+        ) {
+            Column(
+                modifier = Modifier
+                    .fillMaxWidth()
+                    .padding(horizontal = 16.dp, vertical = 8.dp),
+                verticalArrangement = Arrangement.spacedBy(8.dp)
+            ) {
+                Text(
+                    text = "PREFERENCES",
+                    fontSize = 12.sp,
+                    fontWeight = FontWeight.Bold,
+                    color = MaterialTheme.colorScheme.primary,
+                    letterSpacing = 1.sp,
+                    modifier = Modifier.padding(start = 8.dp, top = 8.dp)
+                )
 
-            SettingsSwitchItem(
-                icon = Icons.Default.Notifications,
-                title = "Notifications",
-                subtitle = "Enable push notifications",
-                checked = notificationsEnabled,
-                onCheckedChange = { notificationsEnabled = it }
-            )
+                SettingsSwitchItem(
+                    icon = Icons.Default.DarkMode,
+                    title = "Dark Mode",
+                    subtitle = "Enable dark theme",
+                    checked = darkMode,
+                    onCheckedChange = { darkMode = it }
+                )
 
-            SettingsSwitchItem(
-                icon = Icons.Default.Fingerprint,
-                title = "Biometric Login",
-                subtitle = "Use fingerprint or face ID",
-                checked = biometricEnabled,
-                onCheckedChange = { biometricEnabled = it }
-            )
+                SettingsSwitchItem(
+                    icon = Icons.Default.Notifications,
+                    title = "Notifications",
+                    subtitle = "Enable push notifications",
+                    checked = notificationsEnabled,
+                    onCheckedChange = { notificationsEnabled = it }
+                )
+
+                SettingsSwitchItem(
+                    icon = Icons.Default.Fingerprint,
+                    title = "Biometric Login",
+                    subtitle = "Use fingerprint or face ID",
+                    checked = biometricEnabled,
+                    onCheckedChange = { biometricEnabled = it }
+                )
+            }
         }
 
         // Currency & Language Section
-        Column(
-            modifier = Modifier
-                .fillMaxWidth()
-                .padding(horizontal = 16.dp, vertical = 8.dp),
-            verticalArrangement = Arrangement.spacedBy(8.dp)
+        AnimatedVisibility(
+            visible = startAnimation,
+            enter = AnimationUtils.SlideInFromBottom + AnimationUtils.FadeIn
         ) {
-            Text(
-                text = "REGIONAL",
-                fontSize = 12.sp,
-                fontWeight = FontWeight.Bold,
-                color = MaterialTheme.colorScheme.primary,
-                letterSpacing = 1.sp,
-                modifier = Modifier.padding(start = 8.dp, top = 8.dp)
-            )
+            Column(
+                modifier = Modifier
+                    .fillMaxWidth()
+                    .padding(horizontal = 16.dp, vertical = 8.dp),
+                verticalArrangement = Arrangement.spacedBy(8.dp)
+            ) {
+                Text(
+                    text = "REGIONAL",
+                    fontSize = 12.sp,
+                    fontWeight = FontWeight.Bold,
+                    color = MaterialTheme.colorScheme.primary,
+                    letterSpacing = 1.sp,
+                    modifier = Modifier.padding(start = 8.dp, top = 8.dp)
+                )
 
-            SettingsDropdownItem(
-                icon = Icons.Default.AttachMoney,
-                title = "Currency",
-                subtitle = "Default currency for transactions",
-                value = currency,
-                options = listOf("USD", "EUR", "GBP", "INR", "JPY", "CAD", "AUD"),
-                onValueChange = { currency = it }
-            )
+                SettingsDropdownItem(
+                    icon = Icons.Default.AttachMoney,
+                    title = "Currency",
+                    subtitle = "Default currency for transactions",
+                    value = currency,
+                    options = listOf("USD", "EUR", "GBP", "INR", "JPY", "CAD", "AUD"),
+                    onValueChange = { currency = it }
+                )
 
-            SettingsDropdownItem(
-                icon = Icons.Default.Language,
-                title = "Language",
-                subtitle = "App display language",
-                value = language,
-                options = listOf("English", "Spanish", "French", "German", "Hindi", "Chinese", "Japanese"),
-                onValueChange = { language = it }
-            )
+                SettingsDropdownItem(
+                    icon = Icons.Default.Language,
+                    title = "Language",
+                    subtitle = "App display language",
+                    value = language,
+                    options = listOf("English", "Spanish", "French", "German", "Hindi", "Chinese", "Japanese"),
+                    onValueChange = { language = it }
+                )
+            }
         }
 
         // Data & Privacy Section
-        Column(
-            modifier = Modifier
-                .fillMaxWidth()
-                .padding(horizontal = 16.dp, vertical = 8.dp),
-            verticalArrangement = Arrangement.spacedBy(8.dp)
+        AnimatedVisibility(
+            visible = startAnimation,
+            enter = AnimationUtils.SlideInFromBottom + AnimationUtils.FadeIn
         ) {
-            Text(
-                text = "DATA & PRIVACY",
-                fontSize = 12.sp,
-                fontWeight = FontWeight.Bold,
-                color = MaterialTheme.colorScheme.primary,
-                letterSpacing = 1.sp,
-                modifier = Modifier.padding(start = 8.dp, top = 8.dp)
-            )
+            Column(
+                modifier = Modifier
+                    .fillMaxWidth()
+                    .padding(horizontal = 16.dp, vertical = 8.dp),
+                verticalArrangement = Arrangement.spacedBy(8.dp)
+            ) {
+                Text(
+                    text = "DATA & PRIVACY",
+                    fontSize = 12.sp,
+                    fontWeight = FontWeight.Bold,
+                    color = MaterialTheme.colorScheme.primary,
+                    letterSpacing = 1.sp,
+                    modifier = Modifier.padding(start = 8.dp, top = 8.dp)
+                )
 
-            SettingsMenuItem(
-                icon = Icons.Default.CloudUpload,
-                title = "Backup Data",
-                subtitle = "Last backup: 2 days ago",
-                onClick = { /* TODO: Implement backup */ }
-            )
+                SettingsMenuItem(
+                    icon = Icons.Default.CloudUpload,
+                    title = "Backup Data",
+                    subtitle = "Last backup: 2 days ago",
+                    onClick = { /* TODO: Implement backup */ }
+                )
 
-            SettingsMenuItem(
-                icon = Icons.Default.CloudDownload,
-                title = "Export Data",
-                subtitle = "Export to CSV or PDF",
-                onClick = { /* TODO: Implement export */ }
-            )
+                SettingsMenuItem(
+                    icon = Icons.Default.CloudDownload,
+                    title = "Export Data",
+                    subtitle = "Export to CSV or PDF",
+                    onClick = { /* TODO: Implement export */ }
+                )
 
-            SettingsMenuItem(
-                icon = Icons.Default.DeleteForever,
-                title = "Clear Cache",
-                subtitle = "Free up storage space",
-                onClick = { /* TODO: Implement clear cache */ }
-            )
+                SettingsMenuItem(
+                    icon = Icons.Default.DeleteForever,
+                    title = "Clear Cache",
+                    subtitle = "Free up storage space",
+                    onClick = { /* TODO: Implement clear cache */ }
+                )
 
-            SettingsMenuItem(
-                icon = Icons.Default.PrivacyTip,
-                title = "Privacy Policy",
-                subtitle = "View privacy policy",
-                onClick = { /* TODO: Navigate to privacy policy */ }
-            )
+                SettingsMenuItem(
+                    icon = Icons.Default.PrivacyTip,
+                    title = "Privacy Policy",
+                    subtitle = "View privacy policy",
+                    onClick = { /* TODO: Navigate to privacy policy */ }
+                )
+            }
         }
 
         // About Section
-        Column(
-            modifier = Modifier
-                .fillMaxWidth()
-                .padding(horizontal = 16.dp, vertical = 8.dp),
-            verticalArrangement = Arrangement.spacedBy(8.dp)
+        AnimatedVisibility(
+            visible = startAnimation,
+            enter = AnimationUtils.SlideInFromBottom + AnimationUtils.FadeIn
         ) {
-            Text(
-                text = "ABOUT",
-                fontSize = 12.sp,
-                fontWeight = FontWeight.Bold,
-                color = MaterialTheme.colorScheme.primary,
-                letterSpacing = 1.sp,
-                modifier = Modifier.padding(start = 8.dp, top = 8.dp)
-            )
+            Column(
+                modifier = Modifier
+                    .fillMaxWidth()
+                    .padding(horizontal = 16.dp, vertical = 8.dp),
+                verticalArrangement = Arrangement.spacedBy(8.dp)
+            ) {
+                Text(
+                    text = "ABOUT",
+                    fontSize = 12.sp,
+                    fontWeight = FontWeight.Bold,
+                    color = MaterialTheme.colorScheme.primary,
+                    letterSpacing = 1.sp,
+                    modifier = Modifier.padding(start = 8.dp, top = 8.dp)
+                )
 
-            SettingsMenuItem(
-                icon = Icons.Default.Info,
-                title = "Version",
-                subtitle = "1.0.0 (Build 2024.01.15)",
-                onClick = { /* TODO: Show version info */ }
-            )
+                SettingsMenuItem(
+                    icon = Icons.Default.Info,
+                    title = "Version",
+                    subtitle = "1.0.0 (Build 2024.01.15)",
+                    onClick = { /* TODO: Show version info */ }
+                )
 
-            SettingsMenuItem(
-                icon = Icons.Default.Update,
-                title = "Check for Updates",
-                subtitle = "You're on the latest version",
-                onClick = { /* TODO: Check for updates */ }
-            )
+                SettingsMenuItem(
+                    icon = Icons.Default.Update,
+                    title = "Check for Updates",
+                    subtitle = "You're on the latest version",
+                    onClick = { /* TODO: Check for updates */ }
+                )
 
-            SettingsMenuItem(
-                icon = Icons.Default.RateReview,
-                title = "Rate App",
-                subtitle = "Give us your feedback",
-                onClick = { /* TODO: Open app store */ }
-            )
+                SettingsMenuItem(
+                    icon = Icons.Default.RateReview,
+                    title = "Rate App",
+                    subtitle = "Give us your feedback",
+                    onClick = { /* TODO: Open app store */ }
+                )
+            }
         }
 
         Spacer(modifier = Modifier.height(24.dp))

@@ -1,5 +1,6 @@
 package com.example.ui.screens
 
+import androidx.compose.animation.*
 import androidx.compose.animation.core.animateFloatAsState
 import androidx.compose.foundation.BorderStroke
 import androidx.compose.foundation.Canvas
@@ -9,6 +10,7 @@ import androidx.compose.foundation.layout.*
 import androidx.compose.foundation.lazy.LazyColumn
 import androidx.compose.foundation.lazy.LazyRow
 import androidx.compose.foundation.lazy.items
+import androidx.compose.foundation.lazy.itemsIndexed
 import androidx.compose.foundation.shape.CircleShape
 import androidx.compose.foundation.shape.RoundedCornerShape
 import androidx.compose.material.icons.Icons
@@ -30,6 +32,8 @@ import androidx.compose.ui.text.style.TextAlign
 import androidx.compose.ui.unit.dp
 import androidx.compose.ui.unit.sp
 import com.example.ui.theme.*
+import com.example.ui.theme.AnimationUtils
+import com.example.ui.viewmodel.FinanceViewModel
 import java.text.SimpleDateFormat
 import java.util.*
 
@@ -38,6 +42,11 @@ import java.util.*
 fun AnalyticsScreenView() {
     var selectedTab by remember { mutableStateOf(0) }
     val tabs = listOf("Overview", "Reports", "Trends")
+    var startAnimation by remember { mutableStateOf(false) }
+
+    LaunchedEffect(Unit) {
+        startAnimation = true
+    }
 
     Column(
         modifier = Modifier
@@ -45,63 +54,78 @@ fun AnalyticsScreenView() {
             .padding(16.dp)
     ) {
         // Header
-        Row(
-            modifier = Modifier.fillMaxWidth(),
-            horizontalArrangement = Arrangement.SpaceBetween,
-            verticalAlignment = Alignment.CenterVertically
+        AnimatedVisibility(
+            visible = startAnimation,
+            enter = AnimationUtils.SlideInFromBottom + AnimationUtils.FadeIn
         ) {
-            Column {
-                Text(
-                    text = "Analytics",
-                    fontSize = 24.sp,
-                    fontWeight = FontWeight.Black,
-                    color = MaterialTheme.colorScheme.onBackground
-                )
-                Text(
-                    text = "Financial insights & reports",
-                    fontSize = 12.sp,
-                    color = MaterialTheme.colorScheme.onSurfaceVariant.copy(alpha = 0.7f)
-                )
-            }
-            Box(
-                modifier = Modifier
-                    .size(40.dp)
-                    .clip(CircleShape)
-                    .background(MaterialTheme.colorScheme.primaryContainer),
-                contentAlignment = Alignment.Center
+            Row(
+                modifier = Modifier.fillMaxWidth(),
+                horizontalArrangement = Arrangement.SpaceBetween,
+                verticalAlignment = Alignment.CenterVertically
             ) {
-                Icon(
-                    imageVector = Icons.Default.Analytics,
-                    contentDescription = "Analytics",
-                    tint = MaterialTheme.colorScheme.primary
-                )
+                Column {
+                    Text(
+                        text = "Analytics",
+                        fontSize = 24.sp,
+                        fontWeight = FontWeight.Black,
+                        color = MaterialTheme.colorScheme.onBackground
+                    )
+                    Text(
+                        text = "Financial insights & reports",
+                        fontSize = 12.sp,
+                        color = MaterialTheme.colorScheme.onSurfaceVariant.copy(alpha = 0.7f)
+                    )
+                }
+                Box(
+                    modifier = Modifier
+                        .size(40.dp)
+                        .clip(CircleShape)
+                        .background(MaterialTheme.colorScheme.primaryContainer),
+                    contentAlignment = Alignment.Center
+                ) {
+                    Icon(
+                        imageVector = Icons.Default.Analytics,
+                        contentDescription = "Analytics",
+                        tint = MaterialTheme.colorScheme.primary
+                    )
+                }
             }
         }
 
         Spacer(modifier = Modifier.height(16.dp))
 
         // Tab Row
-        TabRow(
-            selectedTabIndex = selectedTab,
-            containerColor = MaterialTheme.colorScheme.surface,
-            contentColor = MaterialTheme.colorScheme.primary
+        AnimatedVisibility(
+            visible = startAnimation,
+            enter = AnimationUtils.FadeIn
         ) {
-            tabs.forEachIndexed { index, title ->
-                Tab(
-                    selected = selectedTab == index,
-                    onClick = { selectedTab = index },
-                    text = { Text(title, fontSize = 12.sp, fontWeight = FontWeight.Bold) }
-                )
+            TabRow(
+                selectedTabIndex = selectedTab,
+                containerColor = MaterialTheme.colorScheme.surface,
+                contentColor = MaterialTheme.colorScheme.primary
+            ) {
+                tabs.forEachIndexed { index, title ->
+                    Tab(
+                        selected = selectedTab == index,
+                        onClick = { selectedTab = index },
+                        text = { Text(title, fontSize = 12.sp, fontWeight = FontWeight.Bold) }
+                    )
+                }
             }
         }
 
         Spacer(modifier = Modifier.height(16.dp))
 
-        // Tab Content
-        when (selectedTab) {
-            0 -> OverviewTab()
-            1 -> ReportsTab()
-            2 -> TrendsTab()
+        // Tab Content with animation
+        AnimatedVisibility(
+            visible = startAnimation,
+            enter = AnimationUtils.FadeIn + AnimationUtils.SlideInFromBottom
+        ) {
+            when (selectedTab) {
+                0 -> OverviewTab()
+                1 -> ReportsTab()
+                2 -> TrendsTab()
+            }
         }
     }
 }
@@ -120,51 +144,52 @@ fun OverviewTab() {
                 modifier = Modifier.fillMaxWidth()
             ) {
                 Column(modifier = Modifier.padding(20.dp)) {
-                    Row(
-                        modifier = Modifier.fillMaxWidth(),
-                        horizontalArrangement = Arrangement.SpaceBetween,
-                        verticalAlignment = Alignment.CenterVertically
-                    ) {
-                        Column {
-                            Text(
-                                text = "Financial Health Score",
-                                fontSize = 14.sp,
-                                fontWeight = FontWeight.Bold,
-                                color = MaterialTheme.colorScheme.onSurface
-                            )
-                            Text(
-                                text = "Updated today",
-                                fontSize = 10.sp,
-                                color = MaterialTheme.colorScheme.onSurfaceVariant.copy(alpha = 0.6f)
-                            )
-                        }
-                        Box(
-                            modifier = Modifier
-                                .size(60.dp)
-                                .clip(CircleShape)
-                                .background(BentoAccentGreen.copy(alpha = 0.15f)),
-                            contentAlignment = Alignment.Center
+                        Row(
+                            modifier = Modifier.fillMaxWidth(),
+                            horizontalArrangement = Arrangement.SpaceBetween,
+                            verticalAlignment = Alignment.CenterVertically
                         ) {
-                            Text(
-                                text = "B+",
-                                fontSize = 24.sp,
-                                fontWeight = FontWeight.Black,
-                                color = BentoAccentGreen
-                            )
+                            Column {
+                                Text(
+                                    text = "Financial Health Score",
+                                    fontSize = 14.sp,
+                                    fontWeight = FontWeight.Bold,
+                                    color = MaterialTheme.colorScheme.onSurface
+                                )
+                                Text(
+                                    text = "Updated today",
+                                    fontSize = 10.sp,
+                                    color = MaterialTheme.colorScheme.onSurfaceVariant.copy(alpha = 0.6f)
+                                )
+                            }
+                            Box(
+                                modifier = Modifier
+                                    .size(60.dp)
+                                    .clip(CircleShape)
+                                    .background(BentoAccentGreen.copy(alpha = 0.15f)),
+                                contentAlignment = Alignment.Center
+                            ) {
+                                Text(
+                                    text = "B+",
+                                    fontSize = 24.sp,
+                                    fontWeight = FontWeight.Black,
+                                    color = BentoAccentGreen
+                                )
+                            }
                         }
-                    }
 
-                    Spacer(modifier = Modifier.height(16.dp))
+                        Spacer(modifier = Modifier.height(16.dp))
 
-                    // Score Breakdown
-                    Row(
-                        modifier = Modifier.fillMaxWidth(),
-                        horizontalArrangement = Arrangement.SpaceBetween
-                    ) {
-                        ScoreItem("Savings", 75, BentoAccentGreen)
-                        ScoreItem("Budget", 65, BentoAccentGold)
-                        ScoreItem("Debt", 80, BentoPrimary)
-                        ScoreItem("Invest", 45, BentoError)
+                        // Score Breakdown
+                        Row(
+                            modifier = Modifier.fillMaxWidth(),
+                            horizontalArrangement = Arrangement.SpaceBetween
+                        ) {
+                            ScoreItem("Savings", 75, BentoAccentGreen)
+                            ScoreItem("Budget", 65, BentoAccentGold)
+                            ScoreItem("Debt", 80, BentoPrimary)
+                            ScoreItem("Invest", 45, BentoError)
+                        }
                     }
                 }
             }
@@ -178,40 +203,41 @@ fun OverviewTab() {
                 border = BorderStroke(1.dp, MaterialTheme.colorScheme.outline.copy(alpha = 0.12f)),
                 modifier = Modifier.fillMaxWidth()
             ) {
-                Column(modifier = Modifier.padding(20.dp)) {
-                    Row(
-                        modifier = Modifier.fillMaxWidth(),
-                        horizontalArrangement = Arrangement.SpaceBetween,
-                        verticalAlignment = Alignment.CenterVertically
-                    ) {
-                        Text(
-                            text = "Budget Health",
-                            fontSize = 16.sp,
-                            fontWeight = FontWeight.Bold,
-                            color = MaterialTheme.colorScheme.onSurface
-                        )
-                        Box(
-                            modifier = Modifier
-                                .clip(RoundedCornerShape(12.dp))
-                                .background(BentoAccentGreen.copy(alpha = 0.15f))
-                                .padding(horizontal = 12.dp, vertical = 6.dp)
+                    Column(modifier = Modifier.padding(20.dp)) {
+                        Row(
+                            modifier = Modifier.fillMaxWidth(),
+                            horizontalArrangement = Arrangement.SpaceBetween,
+                            verticalAlignment = Alignment.CenterVertically
                         ) {
                             Text(
-                                text = "75% Healthy",
-                                fontSize = 11.sp,
+                                text = "Budget Health",
+                                fontSize = 16.sp,
                                 fontWeight = FontWeight.Bold,
-                                color = BentoAccentGreen
+                                color = MaterialTheme.colorScheme.onSurface
                             )
+                            Box(
+                                modifier = Modifier
+                                    .clip(RoundedCornerShape(12.dp))
+                                    .background(BentoAccentGreen.copy(alpha = 0.15f))
+                                    .padding(horizontal = 12.dp, vertical = 6.dp)
+                            ) {
+                                Text(
+                                    text = "75% Healthy",
+                                    fontSize = 11.sp,
+                                    fontWeight = FontWeight.Bold,
+                                    color = BentoAccentGreen
+                                )
+                            }
                         }
+
+                        Spacer(modifier = Modifier.height(12.dp))
+
+                        // Budget Items
+                        BudgetHealthItem("Food", 85, BentoAccentGreen)
+                        BudgetHealthItem("Shopping", 120, BentoError)
+                        BudgetHealthItem("Rent", 45, BentoAccentGold)
+                        BudgetHealthItem("Utilities", 30, BentoAccentGreen)
                     }
-
-                    Spacer(modifier = Modifier.height(12.dp))
-
-                    // Budget Items
-                    BudgetHealthItem("Food", 85, BentoAccentGreen)
-                    BudgetHealthItem("Shopping", 120, BentoError)
-                    BudgetHealthItem("Rent", 45, BentoAccentGold)
-                    BudgetHealthItem("Utilities", 30, BentoAccentGreen)
                 }
             }
         }
@@ -224,83 +250,84 @@ fun OverviewTab() {
                 border = BorderStroke(1.dp, MaterialTheme.colorScheme.outline.copy(alpha = 0.12f)),
                 modifier = Modifier.fillMaxWidth()
             ) {
-                Column(modifier = Modifier.padding(20.dp)) {
-                    Text(
-                        text = "Year Over Year",
-                        fontSize = 16.sp,
-                        fontWeight = FontWeight.Bold,
-                        color = MaterialTheme.colorScheme.onSurface,
-                        modifier = Modifier.padding(bottom = 12.dp)
-                    )
+                    Column(modifier = Modifier.padding(20.dp)) {
+                        Text(
+                            text = "Year Over Year",
+                            fontSize = 16.sp,
+                            fontWeight = FontWeight.Bold,
+                            color = MaterialTheme.colorScheme.onSurface,
+                            modifier = Modifier.padding(bottom = 12.dp)
+                        )
 
-                    Row(
-                        modifier = Modifier.fillMaxWidth(),
-                        horizontalArrangement = Arrangement.SpaceBetween
-                    ) {
-                        Column {
-                            Text(
-                                text = "2024 Total",
-                                fontSize = 11.sp,
-                                color = MaterialTheme.colorScheme.onSurfaceVariant.copy(alpha = 0.7f)
-                            )
-                            Text(
-                                text = "$24,580",
-                                fontSize = 20.sp,
-                                fontWeight = FontWeight.Black,
-                                color = MaterialTheme.colorScheme.onSurface
-                            )
-                        }
-                        Column(horizontalAlignment = Alignment.End) {
-                            Text(
-                                text = "vs 2023",
-                                fontSize = 11.sp,
-                                color = MaterialTheme.colorScheme.onSurfaceVariant.copy(alpha = 0.7f)
-                            )
-                            Row(verticalAlignment = Alignment.CenterVertically) {
-                                Icon(
-                                    imageVector = Icons.Default.ArrowDownward,
-                                    contentDescription = "Decrease",
-                                    tint = BentoAccentGreen,
-                                    modifier = Modifier.size(16.dp)
+                        Row(
+                            modifier = Modifier.fillMaxWidth(),
+                            horizontalArrangement = Arrangement.SpaceBetween
+                        ) {
+                            Column {
+                                Text(
+                                    text = "2024 Total",
+                                    fontSize = 11.sp,
+                                    color = MaterialTheme.colorScheme.onSurfaceVariant.copy(alpha = 0.7f)
                                 )
                                 Text(
-                                    text = "8.2%",
-                                    fontSize = 16.sp,
-                                    fontWeight = FontWeight.Bold,
-                                    color = BentoAccentGreen
+                                    text = "$24,580",
+                                    fontSize = 20.sp,
+                                    fontWeight = FontWeight.Black,
+                                    color = MaterialTheme.colorScheme.onSurface
                                 )
                             }
-                        }
-                    }
-
-                    Spacer(modifier = Modifier.height(12.dp))
-
-                    // Mini chart
-                    Box(
-                        modifier = Modifier
-                            .fillMaxWidth()
-                            .height(100.dp)
-                    ) {
-                        Canvas(modifier = Modifier.fillMaxSize()) {
-                            val width = size.width
-                            val height = size.height
-
-                            // Draw bars for each month
-                            val months = listOf(2100f, 1800f, 2200f, 1900f, 2400f, 2100f, 2300f, 2000f, 2500f, 2200f, 1800f, 2100f)
-                            val barWidth = width / (months.size * 2)
-                            val maxVal = months.maxOrNull() ?: 1f
-
-                            months.forEachIndexed { index, value ->
-                                val barHeight = (value / maxVal) * height * 0.8f
-                                val x = index * (width / months.size) + barWidth / 2
-                                val y = height - barHeight
-
-                                drawRoundRect(
-                                    color = if (index < 6) BentoPrimary.copy(alpha = 0.3f) else BentoPrimary,
-                                    topLeft = Offset(x, y),
-                                    size = androidx.compose.ui.geometry.Size(barWidth, barHeight),
-                                    cornerRadius = androidx.compose.ui.geometry.CornerRadius(4f, 4f)
+                            Column(horizontalAlignment = Alignment.End) {
+                                Text(
+                                    text = "vs 2023",
+                                    fontSize = 11.sp,
+                                    color = MaterialTheme.colorScheme.onSurfaceVariant.copy(alpha = 0.7f)
                                 )
+                                Row(verticalAlignment = Alignment.CenterVertically) {
+                                    Icon(
+                                        imageVector = Icons.Default.ArrowDownward,
+                                        contentDescription = "Decrease",
+                                        tint = BentoAccentGreen,
+                                        modifier = Modifier.size(16.dp)
+                                    )
+                                    Text(
+                                        text = "8.2%",
+                                        fontSize = 16.sp,
+                                        fontWeight = FontWeight.Bold,
+                                        color = BentoAccentGreen
+                                    )
+                                }
+                            }
+                        }
+
+                        Spacer(modifier = Modifier.height(12.dp))
+
+                        // Mini chart
+                        Box(
+                            modifier = Modifier
+                                .fillMaxWidth()
+                                .height(100.dp)
+                        ) {
+                            Canvas(modifier = Modifier.fillMaxSize()) {
+                                val width = size.width
+                                val height = size.height
+
+                                // Draw bars for each month
+                                val months = listOf(2100f, 1800f, 2200f, 1900f, 2400f, 2100f, 2300f, 2000f, 2500f, 2200f, 1800f, 2100f)
+                                val barWidth = width / (months.size * 2)
+                                val maxVal = months.maxOrNull() ?: 1f
+
+                                months.forEachIndexed { index, value ->
+                                    val barHeight = (value / maxVal) * height * 0.8f
+                                    val x = index * (width / months.size) + barWidth / 2
+                                    val y = height - barHeight
+
+                                    drawRoundRect(
+                                        color = if (index < 6) BentoPrimary.copy(alpha = 0.3f) else BentoPrimary,
+                                        topLeft = Offset(x, y),
+                                        size = androidx.compose.ui.geometry.Size(barWidth, barHeight),
+                                        cornerRadius = androidx.compose.ui.geometry.CornerRadius(4f, 4f)
+                                    )
+                                }
                             }
                         }
                     }
@@ -316,57 +343,58 @@ fun OverviewTab() {
                 border = BorderStroke(1.dp, MaterialTheme.colorScheme.outline.copy(alpha = 0.12f)),
                 modifier = Modifier.fillMaxWidth()
             ) {
-                Column(modifier = Modifier.padding(20.dp)) {
-                    Text(
-                        text = "Spending Heatmap",
-                        fontSize = 16.sp,
-                        fontWeight = FontWeight.Bold,
-                        color = MaterialTheme.colorScheme.onSurface,
-                        modifier = Modifier.padding(bottom = 12.dp)
-                    )
+                    Column(modifier = Modifier.padding(20.dp)) {
+                        Text(
+                            text = "Spending Heatmap",
+                            fontSize = 16.sp,
+                            fontWeight = FontWeight.Bold,
+                            color = MaterialTheme.colorScheme.onSurface,
+                            modifier = Modifier.padding(bottom = 12.dp)
+                        )
 
-                    // Calendar-style heatmap
-                    val days = listOf(
-                        "Mon", "Tue", "Wed", "Thu", "Fri", "Sat", "Sun"
-                    )
+                        // Calendar-style heatmap
+                        val days = listOf(
+                            "Mon", "Tue", "Wed", "Thu", "Fri", "Sat", "Sun"
+                        )
 
-                    Row(
-                        modifier = Modifier.fillMaxWidth(),
-                        horizontalArrangement = Arrangement.SpaceBetween
-                    ) {
-                        days.forEach { day ->
-                            Column(horizontalAlignment = Alignment.CenterHorizontally) {
-                                Text(
-                                    text = day,
-                                    fontSize = 9.sp,
-                                    color = MaterialTheme.colorScheme.onSurfaceVariant.copy(alpha = 0.6f),
-                                    modifier = Modifier.padding(bottom = 4.dp)
-                                )
-                                Box(
-                                    modifier = Modifier
-                                        .size(32.dp)
-                                        .clip(RoundedCornerShape(8.dp))
-                                        .background(
-                                            when (day) {
-                                                "Mon" -> BentoPrimary.copy(alpha = 0.8f)
-                                                "Wed" -> BentoPrimary.copy(alpha = 0.4f)
-                                                "Fri" -> BentoPrimary.copy(alpha = 0.6f)
-                                                else -> MaterialTheme.colorScheme.surfaceVariant.copy(alpha = 0.3f)
-                                            }
-                                        ),
-                                    contentAlignment = Alignment.Center
-                                ) {
+                        Row(
+                            modifier = Modifier.fillMaxWidth(),
+                            horizontalArrangement = Arrangement.SpaceBetween
+                        ) {
+                            days.forEach { day ->
+                                Column(horizontalAlignment = Alignment.CenterHorizontally) {
                                     Text(
-                                        text = when (day) {
-                                            "Mon" -> "$45"
-                                            "Wed" -> "$12"
-                                            "Fri" -> "$28"
-                                            else -> "-"
-                                        },
-                                        fontSize = 8.sp,
-                                        fontWeight = FontWeight.Bold,
-                                        color = Color.White
+                                        text = day,
+                                        fontSize = 9.sp,
+                                        color = MaterialTheme.colorScheme.onSurfaceVariant.copy(alpha = 0.6f),
+                                        modifier = Modifier.padding(bottom = 4.dp)
                                     )
+                                    Box(
+                                        modifier = Modifier
+                                            .size(32.dp)
+                                            .clip(RoundedCornerShape(8.dp))
+                                            .background(
+                                                when (day) {
+                                                    "Mon" -> BentoPrimary.copy(alpha = 0.8f)
+                                                    "Wed" -> BentoPrimary.copy(alpha = 0.4f)
+                                                    "Fri" -> BentoPrimary.copy(alpha = 0.6f)
+                                                    else -> MaterialTheme.colorScheme.surfaceVariant.copy(alpha = 0.3f)
+                                                }
+                                            ),
+                                        contentAlignment = Alignment.Center
+                                    ) {
+                                        Text(
+                                            text = when (day) {
+                                                "Mon" -> "$45"
+                                                "Wed" -> "$12"
+                                                "Fri" -> "$28"
+                                                else -> "-"
+                                            },
+                                            fontSize = 8.sp,
+                                            fontWeight = FontWeight.Bold,
+                                            color = Color.White
+                                        )
+                                    }
                                 }
                             }
                         }
@@ -441,7 +469,11 @@ fun BudgetHealthItem(category: String, percentage: Int, color: Color) {
 }
 
 @Composable
-fun ReportsTab() {
+fun ReportsTab(viewModel: FinanceViewModel = androidx.lifecycle.viewmodel.compose.viewModel()) {
+    val context = androidx.compose.ui.platform.LocalContext.current
+    val clipboardManager = androidx.compose.ui.platform.LocalClipboardManager.current
+    var isLoading by remember { mutableStateOf(false) }
+
     LazyColumn(
         verticalArrangement = Arrangement.spacedBy(12.dp)
     ) {
@@ -464,13 +496,27 @@ fun ReportsTab() {
                     title = "Monthly",
                     icon = Icons.Default.DateRange,
                     color = BentoPrimary,
-                    modifier = Modifier.weight(1f)
+                    modifier = Modifier.weight(1f),
+                    onClick = {
+                        isLoading = true
+                        viewModel.generateReport("MONTHLY", "2024-01-01", "2024-12-31", "CSV") { report ->
+                            viewModel.downloadReport(context, report.id, report.title, report.file_format)
+                            isLoading = false
+                        }
+                    }
                 )
                 ReportTypeCard(
                     title = "Tax",
                     icon = Icons.Default.AccountBalance,
                     color = BentoAccentGold,
-                    modifier = Modifier.weight(1f)
+                    modifier = Modifier.weight(1f),
+                    onClick = {
+                        isLoading = true
+                        viewModel.generateReport("TAX", "2024-01-01", "2024-12-31", "PDF") { report ->
+                            viewModel.downloadReport(context, report.id, report.title, report.file_format)
+                            isLoading = false
+                        }
+                    }
                 )
             }
         }
@@ -484,13 +530,27 @@ fun ReportsTab() {
                     title = "Income",
                     icon = Icons.Default.TrendingUp,
                     color = BentoAccentGreen,
-                    modifier = Modifier.weight(1f)
+                    modifier = Modifier.weight(1f),
+                    onClick = {
+                        isLoading = true
+                        viewModel.generateReport("INCOME", "2024-01-01", "2024-12-31", "CSV") { report ->
+                            viewModel.downloadReport(context, report.id, report.title, report.file_format)
+                            isLoading = false
+                        }
+                    }
                 )
                 ReportTypeCard(
                     title = "Expense",
                     icon = Icons.Default.MoneyOff,
                     color = BentoError,
-                    modifier = Modifier.weight(1f)
+                    modifier = Modifier.weight(1f),
+                    onClick = {
+                        isLoading = true
+                        viewModel.generateReport("EXPENSE", "2024-01-01", "2024-12-31", "CSV") { report ->
+                            viewModel.downloadReport(context, report.id, report.title, report.file_format)
+                            isLoading = false
+                        }
+                    }
                 )
             }
         }
@@ -505,70 +565,74 @@ fun ReportsTab() {
             )
         }
 
-        // Sample recent reports
-        items(
+        // Sample recent reports with staggered animation
+        itemsIndexed(
             listOf(
-                ReportItem("Monthly Summary", "2024-06", "CSV", "2 days ago"),
-                ReportItem("Tax Report", "2024-Q2", "PDF", "1 week ago"),
-                ReportItem("Income Statement", "2024-06", "XLSX", "2 weeks ago")
+                ReportItem("1", "Monthly Summary", "2024-06", "CSV", "2 days ago"),
+                ReportItem("2", "Tax Report", "2024-Q2", "PDF", "1 week ago"),
+                ReportItem("3", "Income Statement", "2024-06", "XLSX", "2 weeks ago")
             )
-        ) { report ->
-            Card(
-                colors = CardDefaults.cardColors(containerColor = MaterialTheme.colorScheme.surface),
-                shape = RoundedCornerShape(16.dp),
-                border = BorderStroke(1.dp, MaterialTheme.colorScheme.outline.copy(alpha = 0.08f)),
-                modifier = Modifier.fillMaxWidth()
-            ) {
-                Row(
-                    modifier = Modifier
-                        .fillMaxWidth()
-                        .padding(16.dp),
-                    horizontalArrangement = Arrangement.SpaceBetween,
-                    verticalAlignment = Alignment.CenterVertically
+        ) { index, report ->
+            key(report.id) {
+                Card(
+                    colors = CardDefaults.cardColors(containerColor = MaterialTheme.colorScheme.surface),
+                    shape = RoundedCornerShape(16.dp),
+                    border = BorderStroke(1.dp, MaterialTheme.colorScheme.outline.copy(alpha = 0.08f)),
+                    modifier = Modifier.fillMaxWidth()
                 ) {
                     Row(
-                        verticalAlignment = Alignment.CenterVertically,
-                        horizontalArrangement = Arrangement.spacedBy(12.dp)
+                        modifier = Modifier
+                            .fillMaxWidth()
+                            .padding(16.dp),
+                        horizontalArrangement = Arrangement.SpaceBetween,
+                        verticalAlignment = Alignment.CenterVertically
                     ) {
-                        Box(
-                            modifier = Modifier
-                                .size(40.dp)
-                                .clip(RoundedCornerShape(12.dp))
-                                .background(MaterialTheme.colorScheme.primaryContainer),
-                            contentAlignment = Alignment.Center
+                        Row(
+                            verticalAlignment = Alignment.CenterVertically,
+                            horizontalArrangement = Arrangement.spacedBy(12.dp)
                         ) {
-                            Icon(
-                                imageVector = Icons.Default.Description,
-                                contentDescription = "Report",
-                                tint = MaterialTheme.colorScheme.primary
-                            )
+                            Box(
+                                modifier = Modifier
+                                    .size(40.dp)
+                                    .clip(RoundedCornerShape(12.dp))
+                                    .background(MaterialTheme.colorScheme.primaryContainer),
+                                contentAlignment = Alignment.Center
+                            ) {
+                                Icon(
+                                    imageVector = Icons.Default.Description,
+                                    contentDescription = "Report",
+                                    tint = MaterialTheme.colorScheme.primary
+                                )
+                            }
+                            Column {
+                                Text(
+                                    text = report.title,
+                                    fontSize = 14.sp,
+                                    fontWeight = FontWeight.Bold,
+                                    color = MaterialTheme.colorScheme.onSurface
+                                )
+                                Text(
+                                    text = "${report.period} • ${report.format}",
+                                    fontSize = 11.sp,
+                                    color = MaterialTheme.colorScheme.onSurfaceVariant.copy(alpha = 0.7f)
+                                )
+                            }
                         }
-                        Column {
+                        Column(horizontalAlignment = Alignment.End) {
                             Text(
-                                text = report.title,
-                                fontSize = 14.sp,
-                                fontWeight = FontWeight.Bold,
-                                color = MaterialTheme.colorScheme.onSurface
+                                text = report.timeAgo,
+                                fontSize = 10.sp,
+                                color = MaterialTheme.colorScheme.onSurfaceVariant.copy(alpha = 0.6f)
                             )
-                            Text(
-                                text = "${report.period} • ${report.format}",
-                                fontSize = 11.sp,
-                                color = MaterialTheme.colorScheme.onSurfaceVariant.copy(alpha = 0.7f)
-                            )
-                        }
-                    }
-                    Column(horizontalAlignment = Alignment.End) {
-                        Text(
-                            text = report.timeAgo,
-                            fontSize = 10.sp,
-                            color = MaterialTheme.colorScheme.onSurfaceVariant.copy(alpha = 0.6f)
-                        )
-                        IconButton(onClick = { /* Download */ }) {
-                            Icon(
-                                imageVector = Icons.Default.Download,
-                                contentDescription = "Download",
-                                tint = MaterialTheme.colorScheme.primary
-                            )
+                            IconButton(onClick = {
+                                viewModel.downloadReport(context, report.id, report.title, report.format.lowercase())
+                            }) {
+                                Icon(
+                                    imageVector = Icons.Default.Download,
+                                    contentDescription = "Download",
+                                    tint = MaterialTheme.colorScheme.primary
+                                )
+                            }
                         }
                     }
                 }
@@ -578,43 +642,62 @@ fun ReportsTab() {
 }
 
 @Composable
-fun ReportTypeCard(title: String, icon: ImageVector, color: Color, modifier: Modifier = Modifier) {
+fun ReportTypeCard(
+    title: String,
+    icon: ImageVector,
+    color: Color,
+    modifier: Modifier = Modifier,
+    onClick: () -> Unit = {}
+) {
+    var startAnimation by remember { mutableStateOf(false) }
+
+    LaunchedEffect(Unit) {
+        startAnimation = true
+    }
+
     Card(
         colors = CardDefaults.cardColors(containerColor = MaterialTheme.colorScheme.surface),
         shape = RoundedCornerShape(20.dp),
         border = BorderStroke(1.dp, MaterialTheme.colorScheme.outline.copy(alpha = 0.12f)),
-        modifier = modifier.clickable { /* Generate report */ }
+        modifier = modifier.clickable { onClick() }
     ) {
-        Column(
-            modifier = Modifier.padding(20.dp),
-            horizontalAlignment = Alignment.CenterHorizontally
+        AnimatedVisibility(
+            visible = startAnimation,
+            enter = AnimationUtils.FadeIn + AnimationUtils.ScaleIn,
+            initialScale = 0.9f
         ) {
-            Box(
-                modifier = Modifier
-                    .size(48.dp)
-                    .clip(CircleShape)
-                    .background(color.copy(alpha = 0.15f)),
-                contentAlignment = Alignment.Center
+            Column(
+                modifier = Modifier.padding(20.dp),
+                horizontalAlignment = Alignment.CenterHorizontally
             ) {
-                Icon(
-                    imageVector = icon,
-                    contentDescription = title,
-                    tint = color,
-                    modifier = Modifier.size(24.dp)
+                Box(
+                    modifier = Modifier
+                        .size(48.dp)
+                        .clip(CircleShape)
+                        .background(color.copy(alpha = 0.15f)),
+                    contentAlignment = Alignment.Center
+                ) {
+                    Icon(
+                        imageVector = icon,
+                        contentDescription = title,
+                        tint = color,
+                        modifier = Modifier.size(24.dp)
+                    )
+                }
+                Spacer(modifier = Modifier.height(8.dp))
+                Text(
+                    text = title,
+                    fontSize = 13.sp,
+                    fontWeight = FontWeight.Bold,
+                    color = MaterialTheme.colorScheme.onSurface
                 )
             }
-            Spacer(modifier = Modifier.height(8.dp))
-            Text(
-                text = title,
-                fontSize = 13.sp,
-                fontWeight = FontWeight.Bold,
-                color = MaterialTheme.colorScheme.onSurface
-            )
         }
     }
 }
 
 data class ReportItem(
+    val id: String,
     val title: String,
     val period: String,
     val format: String,

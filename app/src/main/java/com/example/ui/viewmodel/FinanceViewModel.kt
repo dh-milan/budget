@@ -212,7 +212,7 @@ class FinanceViewModel(application: Application) : AndroidViewModel(application)
                 val apiKey = BuildConfig.GEMINI_API_KEY
                 if (apiKey.isEmpty() || apiKey == "MY_GEMINI_API_KEY") {
                     // Provide intelligent local fallback response without API
-                    val localResponse = generateLocalFinancialAdvice(message, totalIncome, totalExpense, budgets, goals, debts, bills)
+                    val localResponse = generateLocalFinancialAdvice(message, totalIncome, totalExpense, budgets.value, goals.value, debts.value, bills.value)
                     _chatHistory.update { it + ChatMessage("model", localResponse) }
                     _isAiThinking.value = false
                     return@launch
@@ -232,7 +232,9 @@ class FinanceViewModel(application: Application) : AndroidViewModel(application)
             } catch (e: Exception) {
                 Log.e("FinanceViewModel", "Gemini error", e)
                 // Provide local fallback on error
-                val localResponse = generateLocalFinancialAdvice(message, totalIncome, totalExpense, budgets, goals, debts, bills)
+                val currentTotalIncome = transactions.value.filter { it.type == "INCOME" }.sumOf { it.amount }
+                val currentTotalExpense = transactions.value.filter { it.type == "EXPENSE" }.sumOf { it.amount }
+                val localResponse = generateLocalFinancialAdvice(message, currentTotalIncome, currentTotalExpense, budgets.value, goals.value, debts.value, bills.value)
                 _chatHistory.update { it + ChatMessage("model", localResponse) }
             } finally {
                 _isAiThinking.value = false
@@ -248,6 +250,58 @@ class FinanceViewModel(application: Application) : AndroidViewModel(application)
             sb.append("${it.id},\"${it.title.replace("\"", "\"\"")}\",${it.amount},\"${it.category}\",\"${it.type}\",${it.timestamp},\"${it.note.replace("\"", "\"\"")}\",\"${it.tags}\",${it.isRecurring}\n")
         }
         return sb.toString()
+    }
+
+    // Report Generation and Download
+    fun generateReport(reportType: String, startDate: String, endDate: String, fileFormat: String, onComplete: (ReportResponse) -> Unit) {
+        viewModelScope.launch {
+            try {
+                val request = GenerateReportRequest(
+                    report_type = reportType,
+                    start_date = startDate,
+                    end_date = endDate,
+                    file_format = fileFormat
+                )
+                val response = apiService.generateReport(request)
+                onComplete(response)
+            } catch (e: Exception) {
+                Log.e("FinanceViewModel", "Report generation error", e)
+                throw e
+            }
+        }
+    }
+
+    fun downloadReport(context: Context, reportId: String, reportTitle: String, fileFormat: String) {
+        viewModelScope.launch {
+            try {
+                val response = apiService.downloadReport(reportId)
+                if (response.isSuccessful) {
+                    val responseBody = response.body()
+                    if (responseBody != null) {
+                        val bytes = responseBody.bytes()
+                        // Save file to Downloads directory
+                        val downloadsDir = android.os.Environment.getExternalStoragePublicDirectory(android.os.Environment.DIRECTORY_DOWNLOADS)
+                        val fileName = "$reportTitle.$fileFormat"
+                        val file = java.io.File(downloadsDir, fileName)
+                        
+                        file.writeBytes(bytes)
+                        
+                        // Notify user
+                        android.widget.Toast.makeText(context, "Report downloaded to Downloads/$fileName", android.widget.Toast.LENGTH_LONG).show()
+                        
+                        // Trigger media scan to make file visible in gallery
+                        val mediaScanIntent = android.content.Intent(android.content.Intent.ACTION_MEDIA_SCANNER_SCAN_FILE)
+                        mediaScanIntent.data = android.net.Uri.fromFile(file)
+                        context.sendBroadcast(mediaScanIntent)
+                    }
+                } else {
+                    android.widget.Toast.makeText(context, "Failed to download report", android.widget.Toast.LENGTH_SHORT).show()
+                }
+            } catch (e: Exception) {
+                Log.e("FinanceViewModel", "Report download error", e)
+                android.widget.Toast.makeText(context, "Download failed: ${e.message}", android.widget.Toast.LENGTH_SHORT).show()
+            }
+        }
     }
 
     // No mock data - app starts fresh and connects to backend
