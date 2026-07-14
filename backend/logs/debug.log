@@ -17,3 +17,144 @@ INFO 2026-07-12 16:31:41,032 autoreload Watching for file changes with StatReloa
 INFO 2026-07-12 16:31:41,135 autoreload Watching for file changes with StatReloader
 INFO 2026-07-12 16:35:29,244 autoreload Watching for file changes with StatReloader
 INFO 2026-07-12 16:35:48,139 autoreload Watching for file changes with StatReloader
+INFO 2026-07-14 06:13:45,128 autoreload Watching for file changes with StatReloader
+INFO 2026-07-14 06:14:19,597 autoreload Watching for file changes with StatReloader
+INFO 2026-07-14 06:20:41,861 autoreload Watching for file changes with StatReloader
+WARNING 2026-07-14 06:21:43,666 log Not Found: /api/v1/
+WARNING 2026-07-14 06:21:43,667 log "GET /api/v1/ HTTP/1.1" 404 4760
+WARNING 2026-07-14 06:21:59,735 log Not Found: /api/v1/auth/
+WARNING 2026-07-14 06:21:59,736 log "GET /api/v1/auth/ HTTP/1.1" 404 7731
+ERROR 2026-07-14 06:22:11,957 log Internal Server Error: /api/v1/auth/login/
+Traceback (most recent call last):
+  File "/home/milan/Desktop/wealthflow/.venv/lib/python3.12/site-packages/django_redis/cache.py", line 48, in _decorator
+    return method(self, *args, **kwargs)
+           ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+  File "/home/milan/Desktop/wealthflow/.venv/lib/python3.12/site-packages/django_redis/cache.py", line 124, in _get
+    return self.client.get(key, default=default, version=version, client=client)
+           ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+  File "/home/milan/Desktop/wealthflow/.venv/lib/python3.12/site-packages/django_redis/client/default.py", line 362, in get
+    raise ConnectionInterrupted(connection=client) from e
+django_redis.exceptions.ConnectionInterrupted: Redis ConnectionError: Error 111 connecting to localhost:6379. Connection refused.
+
+During handling of the above exception, another exception occurred:
+
+Traceback (most recent call last):
+  File "/home/milan/Desktop/wealthflow/.venv/lib/python3.12/site-packages/django/core/handlers/exception.py", line 55, in inner
+    response = get_response(request)
+               ^^^^^^^^^^^^^^^^^^^^^
+  File "/home/milan/Desktop/wealthflow/.venv/lib/python3.12/site-packages/django/core/handlers/base.py", line 198, in _get_response
+    response = wrapped_callback(request, *callback_args, **callback_kwargs)
+               ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+  File "/home/milan/Desktop/wealthflow/.venv/lib/python3.12/site-packages/django/views/decorators/csrf.py", line 65, in _view_wrapper
+    return view_func(request, *args, **kwargs)
+           ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+  File "/home/milan/Desktop/wealthflow/.venv/lib/python3.12/site-packages/django/views/generic/base.py", line 106, in view
+    return self.dispatch(request, *args, **kwargs)
+           ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+  File "/home/milan/Desktop/wealthflow/.venv/lib/python3.12/site-packages/rest_framework/views.py", line 515, in dispatch
+    response = self.handle_exception(exc)
+               ^^^^^^^^^^^^^^^^^^^^^^^^^^
+  File "/home/milan/Desktop/wealthflow/.venv/lib/python3.12/site-packages/rest_framework/views.py", line 475, in handle_exception
+    self.raise_uncaught_exception(exc)
+  File "/home/milan/Desktop/wealthflow/.venv/lib/python3.12/site-packages/rest_framework/views.py", line 486, in raise_uncaught_exception
+    raise exc
+  File "/home/milan/Desktop/wealthflow/.venv/lib/python3.12/site-packages/rest_framework/views.py", line 503, in dispatch
+    self.initial(request, *args, **kwargs)
+  File "/home/milan/Desktop/wealthflow/.venv/lib/python3.12/site-packages/rest_framework/views.py", line 422, in initial
+    self.check_throttles(request)
+  File "/home/milan/Desktop/wealthflow/.venv/lib/python3.12/site-packages/rest_framework/views.py", line 365, in check_throttles
+    if not throttle.allow_request(request, self):
+           ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+  File "/home/milan/Desktop/wealthflow/.venv/lib/python3.12/site-packages/rest_framework/throttling.py", line 123, in allow_request
+    self.history = self.cache.get(self.key, [])
+                   ^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+  File "/home/milan/Desktop/wealthflow/.venv/lib/python3.12/site-packages/django_redis/cache.py", line 117, in get
+    value = self._get(key, default, version, client)
+            ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+  File "/home/milan/Desktop/wealthflow/.venv/lib/python3.12/site-packages/django_redis/cache.py", line 55, in _decorator
+    raise e.__cause__  # type: ignore[misc] # noqa: B904
+    ^^^^^^^^^^^^^^^^^
+  File "/home/milan/Desktop/wealthflow/.venv/lib/python3.12/site-packages/django_redis/client/default.py", line 360, in get
+    value = client.get(key)
+            ^^^^^^^^^^^^^^^
+  File "/home/milan/Desktop/wealthflow/.venv/lib/python3.12/site-packages/redis/commands/core.py", line 3194, in get
+    return self.execute_command("GET", name, keys=[name])
+           ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+  File "/home/milan/Desktop/wealthflow/.venv/lib/python3.12/site-packages/redis/client.py", line 798, in execute_command
+    return self._execute_command(*args, **options)
+           ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+  File "/home/milan/Desktop/wealthflow/.venv/lib/python3.12/site-packages/redis/client.py", line 804, in _execute_command
+    conn = self.connection or pool.get_connection()
+                              ^^^^^^^^^^^^^^^^^^^^^
+  File "/home/milan/Desktop/wealthflow/.venv/lib/python3.12/site-packages/redis/utils.py", line 258, in wrapper
+    return func(*args, **kwargs)
+           ^^^^^^^^^^^^^^^^^^^^^
+  File "/home/milan/Desktop/wealthflow/.venv/lib/python3.12/site-packages/redis/connection.py", line 3163, in get_connection
+    connection.connect()
+  File "/home/milan/Desktop/wealthflow/.venv/lib/python3.12/site-packages/redis/connection.py", line 1007, in connect
+    self.retry.call_with_retry(
+  File "/home/milan/Desktop/wealthflow/.venv/lib/python3.12/site-packages/redis/retry.py", line 132, in call_with_retry
+    raise error
+  File "/home/milan/Desktop/wealthflow/.venv/lib/python3.12/site-packages/redis/retry.py", line 120, in call_with_retry
+    return do()
+           ^^^^
+  File "/home/milan/Desktop/wealthflow/.venv/lib/python3.12/site-packages/redis/connection.py", line 1008, in <lambda>
+    lambda: self.connect_check_health(
+            ^^^^^^^^^^^^^^^^^^^^^^^^^^
+  File "/home/milan/Desktop/wealthflow/.venv/lib/python3.12/site-packages/redis/connection.py", line 1056, in connect_check_health
+    raise e
+redis.exceptions.ConnectionError: Error 111 connecting to localhost:6379. Connection refused.
+ERROR 2026-07-14 06:22:11,962 log "GET /api/v1/auth/login/ HTTP/1.1" 500 193936
+INFO 2026-07-14 06:23:36,877 autoreload Watching for file changes with StatReloader
+ERROR 2026-07-14 06:23:58,059 log Invalid HTTP_HOST header: '0.0.0.0:8000'. You may need to add '0.0.0.0' to ALLOWED_HOSTS.
+Traceback (most recent call last):
+  File "/home/milan/Desktop/wealthflow/.venv/lib/python3.12/site-packages/django/core/handlers/exception.py", line 55, in inner
+    response = get_response(request)
+               ^^^^^^^^^^^^^^^^^^^^^
+  File "/home/milan/Desktop/wealthflow/.venv/lib/python3.12/site-packages/django/utils/deprecation.py", line 308, in __call__
+    response = self.process_request(request)
+               ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+  File "/home/milan/Desktop/wealthflow/.venv/lib/python3.12/site-packages/django/middleware/common.py", line 48, in process_request
+    host = request.get_host()
+           ^^^^^^^^^^^^^^^^^^
+  File "/home/milan/Desktop/wealthflow/.venv/lib/python3.12/site-packages/django/http/request.py", line 206, in get_host
+    raise DisallowedHost(msg)
+django.core.exceptions.DisallowedHost: Invalid HTTP_HOST header: '0.0.0.0:8000'. You may need to add '0.0.0.0' to ALLOWED_HOSTS.
+WARNING 2026-07-14 06:23:58,061 log "GET / HTTP/1.1" 400 86905
+ERROR 2026-07-14 06:23:58,309 log Invalid HTTP_HOST header: '0.0.0.0:8000'. You may need to add '0.0.0.0' to ALLOWED_HOSTS.
+Traceback (most recent call last):
+  File "/home/milan/Desktop/wealthflow/.venv/lib/python3.12/site-packages/django/core/handlers/exception.py", line 55, in inner
+    response = get_response(request)
+               ^^^^^^^^^^^^^^^^^^^^^
+  File "/home/milan/Desktop/wealthflow/.venv/lib/python3.12/site-packages/django/utils/deprecation.py", line 308, in __call__
+    response = self.process_request(request)
+               ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+  File "/home/milan/Desktop/wealthflow/.venv/lib/python3.12/site-packages/django/middleware/common.py", line 48, in process_request
+    host = request.get_host()
+           ^^^^^^^^^^^^^^^^^^
+  File "/home/milan/Desktop/wealthflow/.venv/lib/python3.12/site-packages/django/http/request.py", line 206, in get_host
+    raise DisallowedHost(msg)
+django.core.exceptions.DisallowedHost: Invalid HTTP_HOST header: '0.0.0.0:8000'. You may need to add '0.0.0.0' to ALLOWED_HOSTS.
+WARNING 2026-07-14 06:23:58,311 log "GET /favicon.ico HTTP/1.1" 400 86629
+WARNING 2026-07-14 06:24:48,464 log Method Not Allowed: /api/v1/auth/login/
+WARNING 2026-07-14 06:24:48,464 log "GET /api/v1/auth/login/ HTTP/1.1" 405 40
+WARNING 2026-07-14 06:24:59,933 log Unauthorized: /api/v1/auth/login/
+WARNING 2026-07-14 06:24:59,934 log "POST /api/v1/auth/login/ HTTP/1.1" 401 37
+INFO 2026-07-14 06:26:23,176 autoreload Watching for file changes with StatReloader
+WARNING 2026-07-14 06:26:48,058 log Unauthorized: /api/v1/auth/login/
+WARNING 2026-07-14 06:26:48,059 log "POST /api/v1/auth/login/ HTTP/1.1" 401 37
+WARNING 2026-07-14 06:27:20,009 log Bad Request: /api/v1/auth/register/
+WARNING 2026-07-14 06:27:20,010 log "POST /api/v1/auth/register/ HTTP/1.1" 400 55
+WARNING 2026-07-14 06:27:30,097 log Bad Request: /api/v1/auth/register/
+WARNING 2026-07-14 06:27:30,097 log "POST /api/v1/auth/register/ HTTP/1.1" 400 55
+WARNING 2026-07-14 06:27:45,177 log Bad Request: /api/v1/auth/register/
+WARNING 2026-07-14 06:27:45,177 log "POST /api/v1/auth/register/ HTTP/1.1" 400 55
+WARNING 2026-07-14 06:28:01,368 log Bad Request: /api/v1/auth/register/
+WARNING 2026-07-14 06:28:01,368 log "POST /api/v1/auth/register/ HTTP/1.1" 400 148
+INFO 2026-07-14 06:28:28,361 autoreload /home/milan/Desktop/wealthflow/backend/apps/authentication/views.py changed, reloading.
+INFO 2026-07-14 06:28:29,066 autoreload Watching for file changes with StatReloader
+INFO 2026-07-14 06:28:51,701 log "POST /api/v1/auth/register/ HTTP/1.1" 201 829
+WARNING 2026-07-14 06:29:03,375 log Method Not Allowed: /api/v1/auth/login/
+WARNING 2026-07-14 06:29:03,375 log "GET /api/v1/auth/login/ HTTP/1.1" 405 40
+WARNING 2026-07-14 06:42:43,970 log Bad Request: /api/v1/auth/login/
+WARNING 2026-07-14 06:42:43,971 log "POST /api/v1/auth/login/ HTTP/1.1" 400 43

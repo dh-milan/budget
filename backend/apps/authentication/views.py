@@ -554,6 +554,7 @@ class RegisterView(ClientIPMixin, APIView):
                 email=email,
                 full_name=full_name,
                 google_subject_id=f"email_{email}",  # Placeholder for email users
+                username=email.split('@')[0],  # Set username from email
                 role='USER',
                 is_active=True,
                 password=make_password(password)  # Hash the password

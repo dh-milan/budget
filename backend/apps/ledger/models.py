@@ -89,7 +89,6 @@ class Transaction(models.Model):
             models.Index(fields=['timestamp']),
             models.Index(fields=['category']),
             models.Index(fields=['type']),
-            models.Index(fields=['user', 'timestamp']),  # Added for user transaction queries
         ]
         ordering = ['-timestamp']
     

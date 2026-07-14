@@ -15,12 +15,8 @@ import androidx.security.crypto.MasterKeys
 object RetrofitClient {
     private const val TAG = "RetrofitClient"
     
-    // Use build config to determine environment
-    private val BASE_URL = if (BuildConfig.DEBUG) {
-        "http://192.168.1.68:8000/api/v1/"  // Development
-    } else {
-        "https://api.wealthflow.app/api/v1/"  // Production
-    }
+    // Use BuildConfig field for backend URL - configurable in build.gradle.kts
+    private val BASE_URL = BuildConfig.BACKEND_URL
     
     // Secure token storage using EncryptedSharedPreferences
     private const val PREF_NAME = "wealthflow_secure_prefs"

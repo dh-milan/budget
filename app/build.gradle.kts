@@ -21,6 +21,9 @@ android {
     versionName = "1.0"
 
     testInstrumentationRunner = "androidx.test.runner.AndroidJUnitRunner"
+    
+    // Backend API URL - can be overridden via BUILD_CONFIG_BACKEND_URL environment variable
+    buildConfigField("String", "BACKEND_URL", "\"http://192.168.1.85:8000/api/v1/\"")
   }
 
   signingConfigs {
