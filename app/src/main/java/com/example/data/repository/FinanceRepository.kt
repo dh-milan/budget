@@ -43,4 +43,12 @@ class FinanceRepository(
     suspend fun insertBill(bill: BillEntity) = billDao.insertBill(bill)
     suspend fun updateBill(bill: BillEntity) = billDao.updateBill(bill)
     suspend fun deleteBill(id: Int) = billDao.deleteBill(id)
+
+    suspend fun clearAll() {
+        transactionDao.clearAll()
+        budgetDao.clearAll()
+        goalDao.clearAll()
+        debtDao.clearAll()
+        billDao.clearAll()
+    }
 }

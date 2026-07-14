@@ -15,6 +15,13 @@ import android.util.Log
 import android.widget.Toast
 import okhttp3.ResponseBody
 
+// Auth state sealed class
+sealed class AuthState {
+    object Loading : AuthState()
+    object Unauthenticated : AuthState()
+    data class Authenticated(val user: UserData) : AuthState()
+}
+
 class FinanceViewModel(application: Application) : AndroidViewModel(application) {
     private val database = AppDatabase.getDatabase(application)
     private val repository = FinanceRepository(
@@ -28,8 +35,13 @@ class FinanceViewModel(application: Application) : AndroidViewModel(application)
     // Backend API client
     private val apiService = RetrofitClient.financeApi
     private val context = application.applicationContext
-    
-    private var authToken: String? = null
+
+    // Auth state
+    private val _authState = MutableStateFlow<AuthState>(AuthState.Loading)
+    val authState: StateFlow<AuthState> = _authState.asStateFlow()
+
+    private val _currentUser = MutableStateFlow<UserData?>(null)
+    val currentUser: StateFlow<UserData?> = _currentUser.asStateFlow()
 
     // Reactive flows
     val transactions: StateFlow<List<TransactionEntity>> = repository.allTransactions
@@ -55,6 +67,39 @@ class FinanceViewModel(application: Application) : AndroidViewModel(application)
 
     private val _isAiThinking = MutableStateFlow(false)
     val isAiThinking: StateFlow<Boolean> = _isAiThinking.asStateFlow()
+
+    // Check for existing session on initialization
+    init {
+        checkExistingSession()
+    }
+
+    private fun checkExistingSession() {
+        viewModelScope.launch {
+            if (RetrofitClient.hasAuthToken()) {
+                _authState.value = AuthState.Loading
+                try {
+                    // Try to load user data from backend
+                    loadDataFromBackend()
+                    _authState.value = AuthState.Authenticated(
+                        UserData(
+                            id = "local",
+                            email = "user@wealthflow.app",
+                            full_name = "User",
+                            avatar_url = null,
+                            role = "user",
+                            is_new_user = false
+                        )
+                    )
+                } catch (e: Exception) {
+                    Log.e("FinanceViewModel", "Session restore failed", e)
+                    RetrofitClient.clearAuthToken()
+                    _authState.value = AuthState.Unauthenticated
+                }
+            } else {
+                _authState.value = AuthState.Unauthenticated
+            }
+        }
+    }
 
     // Database Actions
     fun addTransaction(title: String, amount: Double, category: String, type: String, note: String, tags: String, isRecurring: Boolean = false) {
@@ -315,7 +360,7 @@ class FinanceViewModel(application: Application) : AndroidViewModel(application)
     private fun loadDataFromBackend() {
         viewModelScope.launch {
             try {
-                val token = authToken
+                val token = RetrofitClient.getAuthToken()
                 if (token != null) {
                     // Load transactions from backend (token is automatically added via interceptor)
                     val remoteTransactions = apiService.getTransactions()
@@ -341,34 +386,74 @@ class FinanceViewModel(application: Application) : AndroidViewModel(application)
         }
     }
     
-    fun login(email: String, password: String) {
+    fun login(email: String, password: String, onSuccess: () -> Unit, onError: (String) -> Unit) {
         viewModelScope.launch {
             try {
                 val response = apiService.login(LoginRequest(email, password))
-                authToken = response.access
-                // Store token in RetrofitClient for automatic header attachment
                 RetrofitClient.saveAuthToken(response.access)
-                Toast.makeText(context, "Login successful!", Toast.LENGTH_SHORT).show()
+                _currentUser.value = response.user
+                _authState.value = AuthState.Authenticated(
+                    response.user ?: UserData(
+                        id = "local",
+                        email = email,
+                        full_name = email.substringBefore("@"),
+                        avatar_url = null,
+                        role = "user",
+                        is_new_user = false
+                    )
+                )
                 loadDataFromBackend()
+                onSuccess()
             } catch (e: Exception) {
                 Log.e("FinanceViewModel", "Login error", e)
-                Toast.makeText(context, "Login failed: ${e.message}", Toast.LENGTH_SHORT).show()
+                onError(e.message ?: "Login failed")
             }
         }
     }
 
-    fun register(name: String, email: String, password: String) {
+    fun register(name: String, email: String, password: String, onSuccess: () -> Unit, onError: (String) -> Unit) {
         viewModelScope.launch {
             try {
                 val response = apiService.register(RegisterRequest(email, password, name))
-                authToken = response.access
-                // Store token in RetrofitClient for automatic header attachment
                 RetrofitClient.saveAuthToken(response.access)
-                Toast.makeText(context, "Account created successfully!", Toast.LENGTH_SHORT).show()
+                _currentUser.value = response.user
+                _authState.value = AuthState.Authenticated(
+                    response.user ?: UserData(
+                        id = "local",
+                        email = email,
+                        full_name = name,
+                        avatar_url = null,
+                        role = "user",
+                        is_new_user = true
+                    )
+                )
                 loadDataFromBackend()
+                onSuccess()
             } catch (e: Exception) {
                 Log.e("FinanceViewModel", "Registration error", e)
-                Toast.makeText(context, "Registration failed: ${e.message}", Toast.LENGTH_SHORT).show()
+                onError(e.message ?: "Registration failed")
+            }
+        }
+    }
+
+    fun logout() {
+        viewModelScope.launch {
+            RetrofitClient.clearAuthToken()
+            _currentUser.value = null
+            _authState.value = AuthState.Unauthenticated
+            // Clear local data
+            repository.clearAll()
+        }
+    }
+
+    fun updateProfile(name: String, email: String, onSuccess: () -> Unit, onError: (String) -> Unit) {
+        viewModelScope.launch {
+            try {
+                // Update locally first
+                _currentUser.value = _currentUser.value?.copy(full_name = name, email = email)
+                onSuccess()
+            } catch (e: Exception) {
+                onError(e.message ?: "Update failed")
             }
         }
     }

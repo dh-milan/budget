@@ -1,9 +1,15 @@
 package com.example.ui.screens
 
 import androidx.compose.animation.*
+import androidx.compose.foundation.layout.Box
+import androidx.compose.foundation.layout.fillMaxSize
+import androidx.compose.material3.CircularProgressIndicator
+import androidx.compose.material3.MaterialTheme
 import androidx.compose.runtime.*
+import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import com.example.ui.theme.AnimationUtils
+import com.example.ui.viewmodel.AuthState
 import com.example.ui.viewmodel.FinanceViewModel
 
 @Composable
@@ -17,7 +23,7 @@ fun AuthNavigationScreen(
     onAccentThemeNameChange: (String) -> Unit,
     modifier: Modifier = Modifier
 ) {
-    var isLoggedIn by remember { mutableStateOf(false) }
+    val authState by viewModel.authState.collectAsState()
     var showSplash by remember { mutableStateOf(true) }
     var currentScreen by remember { mutableStateOf("login") } // login, register, forgot_password
 
@@ -29,7 +35,19 @@ fun AuthNavigationScreen(
                 }
             )
         }
-        isLoggedIn -> {
+        authState is AuthState.Loading -> {
+            // Show loading while checking session
+            Box(
+                modifier = Modifier.fillMaxSize(),
+                contentAlignment = Alignment.Center
+            ) {
+                CircularProgressIndicator(
+                    color = MaterialTheme.colorScheme.primary
+                )
+            }
+        }
+        authState is AuthState.Authenticated -> {
+            val user = (authState as AuthState.Authenticated).user
             // User is authenticated, show main app with fade in animation
             AnimatedVisibility(
                 visible = true,
@@ -42,7 +60,10 @@ fun AuthNavigationScreen(
                     dynamicColorEnabled = dynamicColorEnabled,
                     onDynamicColorEnabledChange = onDynamicColorEnabledChange,
                     accentThemeName = accentThemeName,
-                    onAccentThemeNameChange = onAccentThemeNameChange
+                    onAccentThemeNameChange = onAccentThemeNameChange,
+                    userDisplayName = user.full_name,
+                    userEmail = user.email,
+                    onLogout = { viewModel.logout() }
                 )
             }
         }
@@ -80,24 +101,26 @@ fun AuthNavigationScreen(
                     "login" -> {
                         LoginScreen(
                             onLoginSuccess = {
-                                isLoggedIn = true
+                                // Auth state will be updated by ViewModel
                             },
                             onNavigateToRegister = {
                                 currentScreen = "register"
                             },
                             onNavigateToForgotPassword = {
                                 currentScreen = "forgot_password"
-                            }
+                            },
+                            viewModel = viewModel
                         )
                     }
                     "register" -> {
                         RegisterScreen(
                             onRegisterSuccess = {
-                                isLoggedIn = true
+                                // Auth state will be updated by ViewModel
                             },
                             onNavigateToLogin = {
                                 currentScreen = "login"
-                            }
+                            },
+                            viewModel = viewModel
                         )
                     }
                     "forgot_password" -> {

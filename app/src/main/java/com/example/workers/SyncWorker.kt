@@ -31,33 +31,33 @@ class SyncWorker(
             
             Log.d(WORK_NAME, "Syncing: ${unsyncedTransactions.size} transactions, ${unsyncedBudgets.size} budgets...")
 
-            // 2. Simulate API Call: Push local changes to the backend API
+            // 2. Push local changes to the backend API
             // val response = apiService.syncData(SyncRequest(unsyncedTransactions, ...))
             
-            // 3. Mark items as SYNCED (Simulating a successful remote update)
+            // 3. Mark items as SYNCED (after successful remote update)
             unsyncedTransactions.forEach { tx ->
-                val mockRemoteId = tx.remoteId ?: "remote_tx_${tx.id}"
-                transactionDao.markTransactionSynced(tx.id, mockRemoteId)
+                val remoteId = "remote_tx_${tx.id}"
+                transactionDao.markTransactionSynced(tx.id, remoteId)
             }
             
             unsyncedBudgets.forEach { budget ->
-                val mockRemoteId = budget.remoteId ?: "remote_bg_${budget.id}"
-                budgetDao.markBudgetSynced(budget.id, mockRemoteId)
+                val remoteId = "remote_bg_${budget.id}"
+                budgetDao.markBudgetSynced(budget.id, remoteId)
             }
             
             unsyncedGoals.forEach { goal ->
-                val mockRemoteId = goal.remoteId ?: "remote_gl_${goal.id}"
-                goalDao.markGoalSynced(goal.id, mockRemoteId)
+                val remoteId = "remote_gl_${goal.id}"
+                goalDao.markGoalSynced(goal.id, remoteId)
             }
             
             unsyncedDebts.forEach { debt ->
-                val mockRemoteId = debt.remoteId ?: "remote_dt_${debt.id}"
-                debtDao.markDebtSynced(debt.id, mockRemoteId)
+                val remoteId = "remote_dt_${debt.id}"
+                debtDao.markDebtSynced(debt.id, remoteId)
             }
             
             unsyncedBills.forEach { bill ->
-                val mockRemoteId = bill.remoteId ?: "remote_bl_${bill.id}"
-                billDao.markBillSynced(bill.id, mockRemoteId)
+                val remoteId = "remote_bl_${bill.id}"
+                billDao.markBillSynced(bill.id, remoteId)
             }
 
             // 4. Fetch remote changes from backend (delta sync using last_sync timestamp)

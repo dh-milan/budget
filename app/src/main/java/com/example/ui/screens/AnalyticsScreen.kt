@@ -31,6 +31,9 @@ import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.text.style.TextAlign
 import androidx.compose.ui.unit.dp
 import androidx.compose.ui.unit.sp
+import com.example.data.model.BudgetEntity
+import com.example.data.model.GoalEntity
+import com.example.data.model.TransactionEntity
 import com.example.ui.theme.*
 import com.example.ui.theme.AnimationUtils
 import com.example.ui.viewmodel.FinanceViewModel
@@ -39,7 +42,11 @@ import java.util.*
 
 @OptIn(ExperimentalMaterial3Api::class)
 @Composable
-fun AnalyticsScreenView() {
+fun AnalyticsScreenView(
+    transactions: List<TransactionEntity> = emptyList(),
+    budgets: List<BudgetEntity> = emptyList(),
+    goals: List<GoalEntity> = emptyList()
+) {
     var selectedTab by remember { mutableStateOf(0) }
     val tabs = listOf("Overview", "Reports", "Trends")
     var startAnimation by remember { mutableStateOf(false) }
@@ -122,20 +129,27 @@ fun AnalyticsScreenView() {
             enter = AnimationUtils.FadeIn + AnimationUtils.SlideInFromBottom
         ) {
             when (selectedTab) {
-                0 -> OverviewTab()
+                0 -> OverviewTab(transactions = transactions, budgets = budgets)
                 1 -> ReportsTab()
-                2 -> TrendsTab()
+                2 -> TrendsTab(transactions = transactions)
             }
         }
     }
 }
 
 @Composable
-fun OverviewTab() {
+fun OverviewTab(
+    transactions: List<TransactionEntity> = emptyList(),
+    budgets: List<BudgetEntity> = emptyList()
+) {
+    val totalIncome = transactions.filter { it.type == "INCOME" }.sumOf { it.amount }
+    val totalExpense = transactions.filter { it.type == "EXPENSE" }.sumOf { it.amount }
+    val hasData = transactions.isNotEmpty()
+
     LazyColumn(
         verticalArrangement = Arrangement.spacedBy(16.dp)
     ) {
-        // Financial Score Card
+        // Financial Health Overview
         item {
             Card(
                 colors = CardDefaults.cardColors(containerColor = MaterialTheme.colorScheme.surface),
@@ -144,6 +158,42 @@ fun OverviewTab() {
                 modifier = Modifier.fillMaxWidth()
             ) {
                 Column(modifier = Modifier.padding(20.dp)) {
+                    if (!hasData) {
+                        // Empty state
+                        Column(
+                            modifier = Modifier.fillMaxWidth(),
+                            horizontalAlignment = Alignment.CenterHorizontally
+                        ) {
+                            Icon(
+                                imageVector = Icons.Default.BarChart,
+                                contentDescription = "No data",
+                                tint = MaterialTheme.colorScheme.onSurfaceVariant.copy(alpha = 0.3f),
+                                modifier = Modifier.size(64.dp)
+                            )
+                            Spacer(modifier = Modifier.height(12.dp))
+                            Text(
+                                text = "No Analytics Data Yet",
+                                fontSize = 18.sp,
+                                fontWeight = FontWeight.Bold,
+                                color = MaterialTheme.colorScheme.onSurface
+                            )
+                            Text(
+                                text = "Add transactions and budgets to see your financial analytics here.",
+                                fontSize = 13.sp,
+                                color = MaterialTheme.colorScheme.onSurfaceVariant,
+                                textAlign = TextAlign.Center,
+                                modifier = Modifier.padding(top = 4.dp, bottom = 16.dp)
+                            )
+                            Button(
+                                onClick = { /* Navigate to add transaction */ },
+                                colors = ButtonDefaults.buttonColors(containerColor = MaterialTheme.colorScheme.primary)
+                            ) {
+                                Icon(Icons.Default.Add, contentDescription = null, modifier = Modifier.size(18.dp))
+                                Spacer(modifier = Modifier.width(8.dp))
+                                Text("Add Your First Transaction")
+                            }
+                        }
+                    } else {
                         Row(
                             modifier = Modifier.fillMaxWidth(),
                             horizontalArrangement = Arrangement.SpaceBetween,
@@ -151,13 +201,13 @@ fun OverviewTab() {
                         ) {
                             Column {
                                 Text(
-                                    text = "Financial Health Score",
+                                    text = "Financial Overview",
                                     fontSize = 14.sp,
                                     fontWeight = FontWeight.Bold,
                                     color = MaterialTheme.colorScheme.onSurface
                                 )
                                 Text(
-                                    text = "Updated today",
+                                    text = "Based on ${transactions.size} transactions",
                                     fontSize = 10.sp,
                                     color = MaterialTheme.colorScheme.onSurfaceVariant.copy(alpha = 0.6f)
                                 )
@@ -166,42 +216,47 @@ fun OverviewTab() {
                                 modifier = Modifier
                                     .size(60.dp)
                                     .clip(CircleShape)
-                                    .background(BentoAccentGreen.copy(alpha = 0.15f)),
+                                    .background(
+                                        if (totalIncome > totalExpense) BentoAccentGreen.copy(alpha = 0.15f)
+                                        else BentoError.copy(alpha = 0.15f)
+                                    ),
                                 contentAlignment = Alignment.Center
                             ) {
                                 Text(
-                                    text = "B+",
-                                    fontSize = 24.sp,
+                                    text = if (totalIncome > 0) "${(((totalIncome - totalExpense) / totalIncome) * 100).toInt()}%" else "0%",
+                                    fontSize = 16.sp,
                                     fontWeight = FontWeight.Black,
-                                    color = BentoAccentGreen
+                                    color = if (totalIncome > totalExpense) BentoAccentGreen else BentoError
                                 )
                             }
                         }
 
                         Spacer(modifier = Modifier.height(16.dp))
 
-                        // Score Breakdown
+                        // Real data breakdown
                         Row(
                             modifier = Modifier.fillMaxWidth(),
                             horizontalArrangement = Arrangement.SpaceBetween
                         ) {
-                            ScoreItem("Savings", 75, BentoAccentGreen)
-                            ScoreItem("Budget", 65, BentoAccentGold)
-                            ScoreItem("Debt", 80, BentoPrimary)
-                            ScoreItem("Invest", 45, BentoError)
+                            ScoreItem("Income", totalIncome.toInt(), BentoAccentGreen)
+                            ScoreItem("Expenses", totalExpense.toInt(), BentoError)
+                            ScoreItem("Savings", (totalIncome - totalExpense).toInt().coerceAtLeast(0), BentoPrimary)
+                            ScoreItem("Budget", budgets.count(), BentoAccentGold)
                         }
                     }
                 }
             }
+        }
 
-        // Budget Health
-        item {
-            Card(
-                colors = CardDefaults.cardColors(containerColor = MaterialTheme.colorScheme.surface),
-                shape = RoundedCornerShape(24.dp),
-                border = BorderStroke(1.dp, MaterialTheme.colorScheme.outline.copy(alpha = 0.12f)),
-                modifier = Modifier.fillMaxWidth()
-            ) {
+        if (hasData) {
+            // Budget Health based on real budget data
+            item {
+                Card(
+                    colors = CardDefaults.cardColors(containerColor = MaterialTheme.colorScheme.surface),
+                    shape = RoundedCornerShape(24.dp),
+                    border = BorderStroke(1.dp, MaterialTheme.colorScheme.outline.copy(alpha = 0.12f)),
+                    modifier = Modifier.fillMaxWidth()
+                ) {
                     Column(modifier = Modifier.padding(20.dp)) {
                         Row(
                             modifier = Modifier.fillMaxWidth(),
@@ -214,43 +269,75 @@ fun OverviewTab() {
                                 fontWeight = FontWeight.Bold,
                                 color = MaterialTheme.colorScheme.onSurface
                             )
-                            Box(
-                                modifier = Modifier
-                                    .clip(RoundedCornerShape(12.dp))
-                                    .background(BentoAccentGreen.copy(alpha = 0.15f))
-                                    .padding(horizontal = 12.dp, vertical = 6.dp)
-                            ) {
-                                Text(
-                                    text = "75% Healthy",
-                                    fontSize = 11.sp,
-                                    fontWeight = FontWeight.Bold,
-                                    color = BentoAccentGreen
-                                )
+                            if (budgets.isNotEmpty()) {
+                                val healthyCount = budgets.count { it.spentAmount <= it.limitAmount }
+                                val healthPercent = (healthyCount.toFloat() / budgets.size * 100).toInt()
+                                Box(
+                                    modifier = Modifier
+                                        .clip(RoundedCornerShape(12.dp))
+                                        .background(
+                                            if (healthPercent > 50) BentoAccentGreen.copy(alpha = 0.15f)
+                                            else BentoError.copy(alpha = 0.15f)
+                                        )
+                                        .padding(horizontal = 12.dp, vertical = 6.dp)
+                                ) {
+                                    Text(
+                                        text = "${healthPercent}% Healthy",
+                                        fontSize = 11.sp,
+                                        fontWeight = FontWeight.Bold,
+                                        color = if (healthPercent > 50) BentoAccentGreen else BentoError
+                                    )
+                                }
                             }
                         }
 
                         Spacer(modifier = Modifier.height(12.dp))
 
-                        // Budget Items
-                        BudgetHealthItem("Food", 85, BentoAccentGreen)
-                        BudgetHealthItem("Shopping", 120, BentoError)
-                        BudgetHealthItem("Rent", 45, BentoAccentGold)
-                        BudgetHealthItem("Utilities", 30, BentoAccentGreen)
+                        if (budgets.isEmpty()) {
+                            Text(
+                                text = "No budgets configured. Add budgets to track spending by category.",
+                                fontSize = 13.sp,
+                                color = MaterialTheme.colorScheme.onSurfaceVariant,
+                                textAlign = TextAlign.Center,
+                                modifier = Modifier.padding(vertical = 16.dp)
+                            )
+                        } else {
+                            budgets.forEach { budget ->
+                                val percent = if (budget.limitAmount > 0)
+                                    ((budget.spentAmount / budget.limitAmount) * 100).toInt()
+                                else 0
+                                val isOverBudget = budget.spentAmount > budget.limitAmount
+                                BudgetHealthItem(
+                                    category = budget.category,
+                                    percentage = percent,
+                                    color = if (isOverBudget) BentoError else BentoAccentGreen
+                                )
+                            }
+                        }
                     }
                 }
             }
 
-        // Year Over Year
-        item {
-            Card(
-                colors = CardDefaults.cardColors(containerColor = MaterialTheme.colorScheme.surface),
-                shape = RoundedCornerShape(24.dp),
-                border = BorderStroke(1.dp, MaterialTheme.colorScheme.outline.copy(alpha = 0.12f)),
-                modifier = Modifier.fillMaxWidth()
-            ) {
+            // Year Over Year (from real data, grouped by month)
+            item {
+                val monthlyGroups = transactions.groupBy {
+                    val cal = Calendar.getInstance()
+                    cal.timeInMillis = it.timestamp
+                    cal.get(Calendar.MONTH)
+                }
+                val monthlyTotals = (0..11).map { month ->
+                    monthlyGroups[month]?.filter { it.type == "EXPENSE" }?.sumOf { it.amount } ?: 0.0
+                }
+
+                Card(
+                    colors = CardDefaults.cardColors(containerColor = MaterialTheme.colorScheme.surface),
+                    shape = RoundedCornerShape(24.dp),
+                    border = BorderStroke(1.dp, MaterialTheme.colorScheme.outline.copy(alpha = 0.12f)),
+                    modifier = Modifier.fillMaxWidth()
+                ) {
                     Column(modifier = Modifier.padding(20.dp)) {
                         Text(
-                            text = "Year Over Year",
+                            text = "Monthly Spending",
                             fontSize = 16.sp,
                             fontWeight = FontWeight.Bold,
                             color = MaterialTheme.colorScheme.onSurface,
@@ -263,43 +350,22 @@ fun OverviewTab() {
                         ) {
                             Column {
                                 Text(
-                                    text = "2024 Total",
+                                    text = "Total Expenses",
                                     fontSize = 11.sp,
                                     color = MaterialTheme.colorScheme.onSurfaceVariant.copy(alpha = 0.7f)
                                 )
                                 Text(
-                                    text = "$24,580",
+                                    text = "$${String.format(Locale.US, "%,.0f", totalExpense)}",
                                     fontSize = 20.sp,
                                     fontWeight = FontWeight.Black,
                                     color = MaterialTheme.colorScheme.onSurface
                                 )
                             }
-                            Column(horizontalAlignment = Alignment.End) {
-                                Text(
-                                    text = "vs 2023",
-                                    fontSize = 11.sp,
-                                    color = MaterialTheme.colorScheme.onSurfaceVariant.copy(alpha = 0.7f)
-                                )
-                                Row(verticalAlignment = Alignment.CenterVertically) {
-                                    Icon(
-                                        imageVector = Icons.Default.ArrowDownward,
-                                        contentDescription = "Decrease",
-                                        tint = BentoAccentGreen,
-                                        modifier = Modifier.size(16.dp)
-                                    )
-                                    Text(
-                                        text = "8.2%",
-                                        fontSize = 16.sp,
-                                        fontWeight = FontWeight.Bold,
-                                        color = BentoAccentGreen
-                                    )
-                                }
-                            }
                         }
 
                         Spacer(modifier = Modifier.height(12.dp))
 
-                        // Mini chart
+                        // Real bar chart from monthly data
                         Box(
                             modifier = Modifier
                                 .fillMaxWidth()
@@ -308,91 +374,99 @@ fun OverviewTab() {
                             Canvas(modifier = Modifier.fillMaxSize()) {
                                 val width = size.width
                                 val height = size.height
+                                val maxVal = monthlyTotals.maxOrNull()?.coerceAtLeast(1.0) ?: 1.0
+                                val barWidth = width / (monthlyTotals.size * 2)
 
-                                // Draw bars for each month
-                                val months = listOf(2100f, 1800f, 2200f, 1900f, 2400f, 2100f, 2300f, 2000f, 2500f, 2200f, 1800f, 2100f)
-                                val barWidth = width / (months.size * 2)
-                                val maxVal = months.maxOrNull() ?: 1f
-
-                                months.forEachIndexed { index, value ->
-                                    val barHeight = (value / maxVal) * height * 0.8f
-                                    val x = index * (width / months.size) + barWidth / 2
+                                monthlyTotals.forEachIndexed { index, value ->
+                                    val barHeight = (value / maxVal).toFloat() * height * 0.8f
+                                    val x = index * (width / monthlyTotals.size) + barWidth / 2
                                     val y = height - barHeight
 
                                     drawRoundRect(
-                                        color = if (index < 6) BentoPrimary.copy(alpha = 0.3f) else BentoPrimary,
+                                        color = if (index < Calendar.getInstance().get(Calendar.MONTH) + 1) BentoPrimary else BentoPrimary.copy(alpha = 0.3f),
                                         topLeft = Offset(x, y),
-                                        size = androidx.compose.ui.geometry.Size(barWidth, barHeight),
+                                        size = androidx.compose.ui.geometry.Size(barWidth, barHeight.coerceAtLeast(2f)),
                                         cornerRadius = androidx.compose.ui.geometry.CornerRadius(4f, 4f)
                                     )
                                 }
+                            }
+                        }
+
+                        // Month labels
+                        Row(
+                            modifier = Modifier.fillMaxWidth(),
+                            horizontalArrangement = Arrangement.SpaceBetween
+                        ) {
+                            val months = listOf("Jan", "Feb", "Mar", "Apr", "May", "Jun", "Jul", "Aug", "Sep", "Oct", "Nov", "Dec")
+                            months.forEach { month ->
+                                Text(
+                                    text = month,
+                                    fontSize = 7.sp,
+                                    color = MaterialTheme.colorScheme.onSurfaceVariant.copy(alpha = 0.5f)
+                                )
                             }
                         }
                     }
                 }
             }
 
-        // Spending Heatmap
-        item {
-            Card(
-                colors = CardDefaults.cardColors(containerColor = MaterialTheme.colorScheme.surface),
-                shape = RoundedCornerShape(24.dp),
-                border = BorderStroke(1.dp, MaterialTheme.colorScheme.outline.copy(alpha = 0.12f)),
-                modifier = Modifier.fillMaxWidth()
-            ) {
+            // Category breakdown
+            item {
+                val categoryGroups = transactions
+                    .filter { it.type == "EXPENSE" }
+                    .groupBy { it.category }
+                    .map { it.key to it.value.sumOf { tx -> tx.amount } }
+                    .sortedByDescending { it.second }
+
+                Card(
+                    colors = CardDefaults.cardColors(containerColor = MaterialTheme.colorScheme.surface),
+                    shape = RoundedCornerShape(24.dp),
+                    border = BorderStroke(1.dp, MaterialTheme.colorScheme.outline.copy(alpha = 0.12f)),
+                    modifier = Modifier.fillMaxWidth()
+                ) {
                     Column(modifier = Modifier.padding(20.dp)) {
                         Text(
-                            text = "Spending Heatmap",
+                            text = "Spending by Category",
                             fontSize = 16.sp,
                             fontWeight = FontWeight.Bold,
                             color = MaterialTheme.colorScheme.onSurface,
                             modifier = Modifier.padding(bottom = 12.dp)
                         )
 
-                        // Calendar-style heatmap
-                        val days = listOf(
-                            "Mon", "Tue", "Wed", "Thu", "Fri", "Sat", "Sun"
-                        )
-
-                        Row(
-                            modifier = Modifier.fillMaxWidth(),
-                            horizontalArrangement = Arrangement.SpaceBetween
-                        ) {
-                            days.forEach { day ->
-                                Column(horizontalAlignment = Alignment.CenterHorizontally) {
-                                    Text(
-                                        text = day,
-                                        fontSize = 9.sp,
-                                        color = MaterialTheme.colorScheme.onSurfaceVariant.copy(alpha = 0.6f),
-                                        modifier = Modifier.padding(bottom = 4.dp)
-                                    )
-                                    Box(
-                                        modifier = Modifier
-                                            .size(32.dp)
-                                            .clip(RoundedCornerShape(8.dp))
-                                            .background(
-                                                when (day) {
-                                                    "Mon" -> BentoPrimary.copy(alpha = 0.8f)
-                                                    "Wed" -> BentoPrimary.copy(alpha = 0.4f)
-                                                    "Fri" -> BentoPrimary.copy(alpha = 0.6f)
-                                                    else -> MaterialTheme.colorScheme.surfaceVariant.copy(alpha = 0.3f)
-                                                }
-                                            ),
-                                        contentAlignment = Alignment.Center
-                                    ) {
-                                        Text(
-                                            text = when (day) {
-                                                "Mon" -> "$45"
-                                                "Wed" -> "$12"
-                                                "Fri" -> "$28"
-                                                else -> "-"
-                                            },
-                                            fontSize = 8.sp,
-                                            fontWeight = FontWeight.Bold,
-                                            color = Color.White
-                                        )
-                                    }
-                                }
+                        categoryGroups.take(5).forEachIndexed { index, (category, amount) ->
+                            val colors = listOf(BentoPrimary, BentoAccentGreen, BentoAccentGold, BentoSecondary, BentoError)
+                            val percent = if (totalExpense > 0) (amount / totalExpense * 100).toInt() else 0
+                            Row(
+                                modifier = Modifier
+                                    .fillMaxWidth()
+                                    .padding(vertical = 4.dp),
+                                verticalAlignment = Alignment.CenterVertically
+                            ) {
+                                Box(
+                                    modifier = Modifier
+                                        .size(8.dp)
+                                        .clip(CircleShape)
+                                        .background(colors[index % colors.size])
+                                )
+                                Spacer(modifier = Modifier.width(8.dp))
+                                Text(
+                                    text = category,
+                                    fontSize = 13.sp,
+                                    fontWeight = FontWeight.Medium,
+                                    color = MaterialTheme.colorScheme.onSurface,
+                                    modifier = Modifier.weight(1f)
+                                )
+                                Text(
+                                    text = "$percent%",
+                                    fontSize = 13.sp,
+                                    fontWeight = FontWeight.Bold,
+                                    color = MaterialTheme.colorScheme.onSurface
+                                )
+                                Text(
+                                    text = " ($${String.format(Locale.US, "%,.0f", amount)})",
+                                    fontSize = 11.sp,
+                                    color = MaterialTheme.colorScheme.onSurfaceVariant
+                                )
                             }
                         }
                     }
@@ -400,6 +474,7 @@ fun OverviewTab() {
             }
         }
     }
+}
 
 @Composable
 fun ScoreItem(label: String, score: Int, color: Color) {
@@ -412,8 +487,8 @@ fun ScoreItem(label: String, score: Int, color: Color) {
             contentAlignment = Alignment.Center
         ) {
             Text(
-                text = "$score",
-                fontSize = 16.sp,
+                text = "$${score}",
+                fontSize = 12.sp,
                 fontWeight = FontWeight.Black,
                 color = color
             )
@@ -561,76 +636,28 @@ fun ReportsTab(viewModel: FinanceViewModel = androidx.lifecycle.viewmodel.compos
             )
         }
 
-        // Sample recent reports with staggered animation
-        itemsIndexed(
-            listOf(
-                ReportItem("1", "Monthly Summary", "2024-06", "CSV", "2 days ago"),
-                ReportItem("2", "Tax Report", "2024-Q2", "PDF", "1 week ago"),
-                ReportItem("3", "Income Statement", "2024-06", "XLSX", "2 weeks ago")
-            )
-        ) { index, report ->
-            key(report.id) {
-                Card(
-                    colors = CardDefaults.cardColors(containerColor = MaterialTheme.colorScheme.surface),
-                    shape = RoundedCornerShape(16.dp),
-                    border = BorderStroke(1.dp, MaterialTheme.colorScheme.outline.copy(alpha = 0.08f)),
-                    modifier = Modifier.fillMaxWidth()
+        // Show message that reports come from backend
+        item {
+            Card(
+                colors = CardDefaults.cardColors(containerColor = MaterialTheme.colorScheme.surfaceVariant),
+                shape = RoundedCornerShape(16.dp),
+                modifier = Modifier.fillMaxWidth()
+            ) {
+                Row(
+                    modifier = Modifier.padding(16.dp),
+                    verticalAlignment = Alignment.CenterVertically
                 ) {
-                    Row(
-                        modifier = Modifier
-                            .fillMaxWidth()
-                            .padding(16.dp),
-                        horizontalArrangement = Arrangement.SpaceBetween,
-                        verticalAlignment = Alignment.CenterVertically
-                    ) {
-                        Row(
-                            verticalAlignment = Alignment.CenterVertically,
-                            horizontalArrangement = Arrangement.spacedBy(12.dp)
-                        ) {
-                            Box(
-                                modifier = Modifier
-                                    .size(40.dp)
-                                    .clip(RoundedCornerShape(12.dp))
-                                    .background(MaterialTheme.colorScheme.primaryContainer),
-                                contentAlignment = Alignment.Center
-                            ) {
-                                Icon(
-                                    imageVector = Icons.Default.Description,
-                                    contentDescription = "Report",
-                                    tint = MaterialTheme.colorScheme.primary
-                                )
-                            }
-                            Column {
-                                Text(
-                                    text = report.title,
-                                    fontSize = 14.sp,
-                                    fontWeight = FontWeight.Bold,
-                                    color = MaterialTheme.colorScheme.onSurface
-                                )
-                                Text(
-                                    text = "${report.period} • ${report.format}",
-                                    fontSize = 11.sp,
-                                    color = MaterialTheme.colorScheme.onSurfaceVariant.copy(alpha = 0.7f)
-                                )
-                            }
-                        }
-                        Column(horizontalAlignment = Alignment.End) {
-                            Text(
-                                text = report.timeAgo,
-                                fontSize = 10.sp,
-                                color = MaterialTheme.colorScheme.onSurfaceVariant.copy(alpha = 0.6f)
-                            )
-                            IconButton(onClick = {
-                                viewModel.downloadReport(context, report.id, report.title, report.format.lowercase())
-                            }) {
-                                Icon(
-                                    imageVector = Icons.Default.Download,
-                                    contentDescription = "Download",
-                                    tint = MaterialTheme.colorScheme.primary
-                                )
-                            }
-                        }
-                    }
+                    Icon(
+                        imageVector = Icons.Default.Info,
+                        contentDescription = "Info",
+                        tint = MaterialTheme.colorScheme.primary
+                    )
+                    Spacer(modifier = Modifier.width(12.dp))
+                    Text(
+                        text = "Reports are generated and stored on your connected backend server. Generate a report above to see it here.",
+                        fontSize = 12.sp,
+                        color = MaterialTheme.colorScheme.onSurfaceVariant
+                    )
                 }
             }
         }
@@ -691,16 +718,16 @@ fun ReportTypeCard(
     }
 }
 
-data class ReportItem(
-    val id: String,
-    val title: String,
-    val period: String,
-    val format: String,
-    val timeAgo: String
-)
-
 @Composable
-fun TrendsTab() {
+fun TrendsTab(transactions: List<TransactionEntity> = emptyList()) {
+    val expenseCategories = transactions
+        .filter { it.type == "EXPENSE" }
+        .groupBy { it.category }
+        .mapValues { (_, txs) -> txs.sumOf { it.amount } }
+        .toList()
+        .sortedByDescending { it.second }
+        .take(5)
+
     LazyColumn(
         verticalArrangement = Arrangement.spacedBy(16.dp)
     ) {
@@ -713,249 +740,97 @@ fun TrendsTab() {
             )
         }
 
-        // Category Trend Items
-        item {
-            Card(
-                colors = CardDefaults.cardColors(containerColor = MaterialTheme.colorScheme.surface),
-                shape = RoundedCornerShape(20.dp),
-                modifier = Modifier.fillMaxWidth()
-            ) {
-                Column(modifier = Modifier.padding(16.dp)) {
-                    Row(
-                        modifier = Modifier.fillMaxWidth(),
-                        horizontalArrangement = Arrangement.SpaceBetween,
-                        verticalAlignment = Alignment.CenterVertically
+        if (expenseCategories.isEmpty()) {
+            item {
+                Card(
+                    colors = CardDefaults.cardColors(containerColor = MaterialTheme.colorScheme.surface),
+                    shape = RoundedCornerShape(20.dp),
+                    modifier = Modifier.fillMaxWidth()
+                ) {
+                    Column(
+                        modifier = Modifier.padding(32.dp),
+                        horizontalAlignment = Alignment.CenterHorizontally
                     ) {
-                        Column {
-                            Text(
-                                text = "Food & Dining",
-                                fontSize = 15.sp,
-                                fontWeight = FontWeight.Bold,
-                                color = MaterialTheme.colorScheme.onSurface
-                            )
-                            Text(
-                                text = "$1,240 this month",
-                                fontSize = 12.sp,
-                                color = MaterialTheme.colorScheme.onSurfaceVariant.copy(alpha = 0.7f)
-                            )
-                        }
-                        Box(
-                            modifier = Modifier
-                                .clip(RoundedCornerShape(8.dp))
-                                .background(BentoError.copy(alpha = 0.15f))
-                                .padding(horizontal = 8.dp, vertical = 4.dp)
-                        ) {
-                            Row(verticalAlignment = Alignment.CenterVertically) {
-                                Icon(
-                                    imageVector = Icons.Default.ArrowUpward,
-                                    contentDescription = "Up",
-                                    tint = BentoError,
-                                    modifier = Modifier.size(12.dp)
-                                )
-                                Text(
-                                    text = "12%",
-                                    fontSize = 11.sp,
-                                    fontWeight = FontWeight.Bold,
-                                    color = BentoError
-                                )
-                            }
-                        }
-                    }
-
-                    Spacer(modifier = Modifier.height(12.dp))
-
-                    // Trend line
-                    Box(
-                        modifier = Modifier
-                            .fillMaxWidth()
-                            .height(60.dp)
-                    ) {
-                        Canvas(modifier = Modifier.fillMaxSize()) {
-                            val width = size.width
-                            val height = size.height
-                            val points = listOf(
-                                Offset(0f, height * 0.7f),
-                                Offset(width * 0.2f, height * 0.5f),
-                                Offset(width * 0.4f, height * 0.6f),
-                                Offset(width * 0.6f, height * 0.3f),
-                                Offset(width * 0.8f, height * 0.4f),
-                                Offset(width, height * 0.2f)
-                            )
-
-                            val path = Path().apply {
-                                moveTo(points[0].x, points[0].y)
-                                points.drop(1).forEach { point ->
-                                    lineTo(point.x, point.y)
-                                }
-                            }
-
-                            drawPath(
-                                path = path,
-                                color = BentoPrimary,
-                                style = Stroke(width = 3f)
-                            )
-                        }
+                        Icon(
+                            imageVector = Icons.Default.TrendingUp,
+                            contentDescription = "No data",
+                            tint = MaterialTheme.colorScheme.onSurfaceVariant.copy(alpha = 0.3f),
+                            modifier = Modifier.size(48.dp)
+                        )
+                        Spacer(modifier = Modifier.height(12.dp))
+                        Text(
+                            text = "No spending trends yet",
+                            fontSize = 16.sp,
+                            fontWeight = FontWeight.Bold,
+                            color = MaterialTheme.colorScheme.onSurface
+                        )
+                        Text(
+                            text = "Add expense transactions to see your spending trends by category.",
+                            fontSize = 13.sp,
+                            color = MaterialTheme.colorScheme.onSurfaceVariant,
+                            textAlign = TextAlign.Center,
+                            modifier = Modifier.padding(top = 4.dp)
+                        )
                     }
                 }
             }
-        }
-
-        item {
-            Card(
-                colors = CardDefaults.cardColors(containerColor = MaterialTheme.colorScheme.surface),
-                shape = RoundedCornerShape(20.dp),
-                modifier = Modifier.fillMaxWidth()
-            ) {
-                Column(modifier = Modifier.padding(16.dp)) {
-                    Row(
-                        modifier = Modifier.fillMaxWidth(),
-                        horizontalArrangement = Arrangement.SpaceBetween,
-                        verticalAlignment = Alignment.CenterVertically
+        } else {
+            val categoryColors = listOf(BentoPrimary, BentoAccentGreen, BentoAccentGold, BentoSecondary, BentoError)
+            expenseCategories.forEachIndexed { index, (category, total) ->
+                val color = categoryColors[index % categoryColors.size]
+                item {
+                    Card(
+                        colors = CardDefaults.cardColors(containerColor = MaterialTheme.colorScheme.surface),
+                        shape = RoundedCornerShape(20.dp),
+                        modifier = Modifier.fillMaxWidth()
                     ) {
-                        Column {
-                            Text(
-                                text = "Transportation",
-                                fontSize = 15.sp,
-                                fontWeight = FontWeight.Bold,
-                                color = MaterialTheme.colorScheme.onSurface
-                            )
-                            Text(
-                                text = "$450 this month",
-                                fontSize = 12.sp,
-                                color = MaterialTheme.colorScheme.onSurfaceVariant.copy(alpha = 0.7f)
-                            )
-                        }
-                        Box(
-                            modifier = Modifier
-                                .clip(RoundedCornerShape(8.dp))
-                                .background(BentoAccentGreen.copy(alpha = 0.15f))
-                                .padding(horizontal = 8.dp, vertical = 4.dp)
-                        ) {
-                            Row(verticalAlignment = Alignment.CenterVertically) {
-                                Icon(
-                                    imageVector = Icons.Default.ArrowDownward,
-                                    contentDescription = "Down",
-                                    tint = BentoAccentGreen,
-                                    modifier = Modifier.size(12.dp)
-                                )
-                                Text(
-                                    text = "5%",
-                                    fontSize = 11.sp,
-                                    fontWeight = FontWeight.Bold,
-                                    color = BentoAccentGreen
-                                )
-                            }
-                        }
-                    }
-
-                    Spacer(modifier = Modifier.height(12.dp))
-
-                    Box(
-                        modifier = Modifier
-                            .fillMaxWidth()
-                            .height(60.dp)
-                    ) {
-                        Canvas(modifier = Modifier.fillMaxSize()) {
-                            val width = size.width
-                            val height = size.height
-                            val points = listOf(
-                                Offset(0f, height * 0.3f),
-                                Offset(width * 0.2f, height * 0.4f),
-                                Offset(width * 0.4f, height * 0.35f),
-                                Offset(width * 0.6f, height * 0.5f),
-                                Offset(width * 0.8f, height * 0.45f),
-                                Offset(width, height * 0.55f)
-                            )
-
-                            val path = Path().apply {
-                                moveTo(points[0].x, points[0].y)
-                                points.drop(1).forEach { point ->
-                                    lineTo(point.x, point.y)
+                        Column(modifier = Modifier.padding(16.dp)) {
+                            Row(
+                                modifier = Modifier.fillMaxWidth(),
+                                horizontalArrangement = Arrangement.SpaceBetween,
+                                verticalAlignment = Alignment.CenterVertically
+                            ) {
+                                Column {
+                                    Text(
+                                        text = category,
+                                        fontSize = 15.sp,
+                                        fontWeight = FontWeight.Bold,
+                                        color = MaterialTheme.colorScheme.onSurface
+                                    )
+                                    Text(
+                                        text = "$${String.format(Locale.US, "%,.0f", total)} total",
+                                        fontSize = 12.sp,
+                                        color = MaterialTheme.colorScheme.onSurfaceVariant.copy(alpha = 0.7f)
+                                    )
+                                }
+                                Box(
+                                    modifier = Modifier
+                                        .clip(RoundedCornerShape(8.dp))
+                                        .background(color.copy(alpha = 0.15f))
+                                        .padding(horizontal = 8.dp, vertical = 4.dp)
+                                ) {
+                                    Text(
+                                        text = "${index + 1}",
+                                        fontSize = 11.sp,
+                                        fontWeight = FontWeight.Bold,
+                                        color = color
+                                    )
                                 }
                             }
 
-                            drawPath(
-                                path = path,
-                                color = BentoAccentGreen,
-                                style = Stroke(width = 3f)
-                            )
-                        }
-                    }
-                }
-            }
-        }
+                            Spacer(modifier = Modifier.height(12.dp))
 
-        item {
-            Card(
-                colors = CardDefaults.cardColors(containerColor = MaterialTheme.colorScheme.surface),
-                shape = RoundedCornerShape(20.dp),
-                modifier = Modifier.fillMaxWidth()
-            ) {
-                Column(modifier = Modifier.padding(16.dp)) {
-                    Row(
-                        modifier = Modifier.fillMaxWidth(),
-                        horizontalArrangement = Arrangement.SpaceBetween,
-                        verticalAlignment = Alignment.CenterVertically
-                    ) {
-                        Column {
-                            Text(
-                                text = "Shopping",
-                                fontSize = 15.sp,
-                                fontWeight = FontWeight.Bold,
-                                color = MaterialTheme.colorScheme.onSurface
-                            )
-                            Text(
-                                text = "$890 this month",
-                                fontSize = 12.sp,
-                                color = MaterialTheme.colorScheme.onSurfaceVariant.copy(alpha = 0.7f)
-                            )
-                        }
-                        Box(
-                            modifier = Modifier
-                                .clip(RoundedCornerShape(8.dp))
-                                .background(MaterialTheme.colorScheme.surfaceVariant.copy(alpha = 0.3f))
-                                .padding(horizontal = 8.dp, vertical = 4.dp)
-                        ) {
-                            Text(
-                                text = "0%",
-                                fontSize = 11.sp,
-                                fontWeight = FontWeight.Bold,
-                                color = MaterialTheme.colorScheme.onSurfaceVariant
-                            )
-                        }
-                    }
-
-                    Spacer(modifier = Modifier.height(12.dp))
-
-                    val outlineColor = MaterialTheme.colorScheme.outline.copy(alpha = 0.5f)
-                    Box(
-                        modifier = Modifier
-                            .fillMaxWidth()
-                            .height(60.dp)
-                    ) {
-                        Canvas(modifier = Modifier.fillMaxSize()) {
-                            val width = size.width
-                            val height = size.height
-                            val points = listOf(
-                                Offset(0f, height * 0.5f),
-                                Offset(width * 0.2f, height * 0.5f),
-                                Offset(width * 0.4f, height * 0.5f),
-                                Offset(width * 0.6f, height * 0.5f),
-                                Offset(width * 0.8f, height * 0.5f),
-                                Offset(width, height * 0.5f)
-                            )
-
-                            val path = Path().apply {
-                                moveTo(points[0].x, points[0].y)
-                                points.drop(1).forEach { point ->
-                                    lineTo(point.x, point.y)
-                                }
-                            }
-
-                            drawPath(
-                                path = path,
-                                color = outlineColor,
-                                style = Stroke(width = 3f)
+                            // Simple trend bar
+                            val maxTotal = expenseCategories.firstOrNull()?.second ?: 1.0
+                            val fraction = (total / maxTotal).toFloat()
+                            LinearProgressIndicator(
+                                progress = { fraction.coerceIn(0f, 1f) },
+                                modifier = Modifier
+                                    .fillMaxWidth()
+                                    .height(6.dp)
+                                    .clip(RoundedCornerShape(3.dp)),
+                                color = color,
+                                trackColor = MaterialTheme.colorScheme.surfaceVariant
                             )
                         }
                     }

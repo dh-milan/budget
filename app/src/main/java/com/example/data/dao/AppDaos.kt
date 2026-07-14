@@ -28,6 +28,9 @@ interface TransactionDao {
 
     @Query("UPDATE transactions SET syncStatus = 'SYNCED', remoteId = :remoteId WHERE id = :localId")
     suspend fun markTransactionSynced(localId: Int, remoteId: String)
+
+    @Query("DELETE FROM transactions")
+    suspend fun clearAll()
 }
 
 @Dao
@@ -49,6 +52,9 @@ interface BudgetDao {
 
     @Query("UPDATE budgets SET syncStatus = 'SYNCED', remoteId = :remoteId WHERE id = :localId")
     suspend fun markBudgetSynced(localId: Int, remoteId: String)
+
+    @Query("DELETE FROM budgets")
+    suspend fun clearAll()
 }
 
 @Dao
@@ -70,6 +76,9 @@ interface GoalDao {
 
     @Query("UPDATE goals SET syncStatus = 'SYNCED', remoteId = :remoteId WHERE id = :localId")
     suspend fun markGoalSynced(localId: Int, remoteId: String)
+
+    @Query("DELETE FROM goals")
+    suspend fun clearAll()
 }
 
 @Dao
@@ -91,6 +100,9 @@ interface DebtDao {
 
     @Query("UPDATE debts SET syncStatus = 'SYNCED', remoteId = :remoteId WHERE id = :localId")
     suspend fun markDebtSynced(localId: Int, remoteId: String)
+
+    @Query("DELETE FROM debts")
+    suspend fun clearAll()
 }
 
 @Dao
@@ -112,4 +124,7 @@ interface BillDao {
 
     @Query("UPDATE bills SET syncStatus = 'SYNCED', remoteId = :remoteId WHERE id = :localId")
     suspend fun markBillSynced(localId: Int, remoteId: String)
+
+    @Query("DELETE FROM bills")
+    suspend fun clearAll()
 }

@@ -3,7 +3,6 @@ package com.example.ui.screens
 import android.widget.Toast
 import androidx.compose.animation.*
 import androidx.compose.foundation.BorderStroke
-import androidx.lifecycle.viewmodel.compose.viewModel
 import androidx.compose.foundation.background
 import androidx.compose.foundation.layout.*
 import androidx.compose.foundation.rememberScrollState
@@ -36,13 +35,13 @@ import com.example.ui.viewmodel.FinanceViewModel
 fun LoginScreen(
     onLoginSuccess: () -> Unit,
     onNavigateToRegister: () -> Unit,
-    onNavigateToForgotPassword: () -> Unit
+    onNavigateToForgotPassword: () -> Unit,
+    viewModel: FinanceViewModel
 ) {
     var email by remember { mutableStateOf("") }
     var password by remember { mutableStateOf("") }
     var isLoading by remember { mutableStateOf(false) }
     val context = LocalContext.current
-    val financeViewModel: FinanceViewModel = androidx.lifecycle.viewmodel.compose.viewModel()
 
     var startAnimation by remember { mutableStateOf(false) }
 
@@ -183,9 +182,18 @@ fun LoginScreen(
                     onClick = {
                         if (email.isNotBlank() && password.isNotBlank()) {
                             isLoading = true
-                            financeViewModel.login(email, password)
-                            Toast.makeText(context, "Login successful!", Toast.LENGTH_SHORT).show()
-                            onLoginSuccess()
+                            viewModel.login(
+                                email = email,
+                                password = password,
+                                onSuccess = {
+                                    isLoading = false
+                                    Toast.makeText(context, "Login successful!", Toast.LENGTH_SHORT).show()
+                                },
+                                onError = { error ->
+                                    isLoading = false
+                                    Toast.makeText(context, error, Toast.LENGTH_LONG).show()
+                                }
+                            )
                         } else {
                             Toast.makeText(context, "Please fill all fields", Toast.LENGTH_SHORT).show()
                         }
@@ -234,7 +242,8 @@ fun LoginScreen(
 @Composable
 fun RegisterScreen(
     onRegisterSuccess: () -> Unit,
-    onNavigateToLogin: () -> Unit
+    onNavigateToLogin: () -> Unit,
+    viewModel: FinanceViewModel
 ) {
     var name by remember { mutableStateOf("") }
     var email by remember { mutableStateOf("") }
@@ -242,7 +251,6 @@ fun RegisterScreen(
     var confirmPassword by remember { mutableStateOf("") }
     var isLoading by remember { mutableStateOf(false) }
     val context = LocalContext.current
-    val financeViewModel: FinanceViewModel = androidx.lifecycle.viewmodel.compose.viewModel()
 
     var startAnimation by remember { mutableStateOf(false) }
 
@@ -399,9 +407,24 @@ fun RegisterScreen(
                     onClick = {
                         if (name.isNotBlank() && email.isNotBlank() && 
                             password.isNotBlank() && password == confirmPassword) {
+                            if (password.length < 6) {
+                                Toast.makeText(context, "Password must be at least 6 characters", Toast.LENGTH_SHORT).show()
+                                return@Button
+                            }
                             isLoading = true
-                            financeViewModel.register(name, email, password)
-                            onRegisterSuccess()
+                            viewModel.register(
+                                name = name,
+                                email = email,
+                                password = password,
+                                onSuccess = {
+                                    isLoading = false
+                                    Toast.makeText(context, "Account created successfully!", Toast.LENGTH_SHORT).show()
+                                },
+                                onError = { error ->
+                                    isLoading = false
+                                    Toast.makeText(context, error, Toast.LENGTH_LONG).show()
+                                }
+                            )
                         } else {
                             Toast.makeText(context, "Please fill all fields correctly", Toast.LENGTH_SHORT).show()
                         }
