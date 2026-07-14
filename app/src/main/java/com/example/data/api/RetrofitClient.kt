@@ -106,10 +106,17 @@ object RetrofitClient {
     }
 
     /**
-     * Get auth token securely
+     * Get auth token securely (internal use by interceptor)
      */
-    private fun getAuthToken(): String? {
+    fun getAuthToken(): String? {
         return securePrefs?.getString(KEY_AUTH_TOKEN, null)
+    }
+
+    /**
+     * Check if a valid token exists (for session restoration)
+     */
+    fun hasAuthToken(): Boolean {
+        return !securePrefs?.getString(KEY_AUTH_TOKEN, null).isNullOrBlank()
     }
 
     /**
