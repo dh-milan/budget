@@ -26,7 +26,7 @@ data class GeminiCandidate(val content: GeminiContent)
 data class GeminiResponse(val candidates: List<GeminiCandidate>)
 
 interface GeminiApiService {
-    @POST("v1beta/models/gemini-3.5-flash:generateContent")
+    @POST("v1beta/models/gemini-1.5-flash:generateContent")
     suspend fun generateContent(
         @Query("key") apiKey: String,
         @Body request: GeminiRequest

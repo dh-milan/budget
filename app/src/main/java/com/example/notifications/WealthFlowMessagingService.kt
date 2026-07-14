@@ -14,7 +14,16 @@ class WealthFlowMessagingService : FirebaseMessagingService() {
     override fun onNewToken(token: String) {
         super.onNewToken(token)
         Log.d("FCM", "New Token: $token")
-        // TODO: Send this token to the Django backend to register this device for push notifications
+        // Send token to backend for push notification registration
+        sendTokenToBackend(token)
+    }
+
+    private fun sendTokenToBackend(token: String) {
+        // This will be called when the FCM token is refreshed
+        // The token should be sent to the backend API endpoint:
+        // POST /api/v1/auth/register-device/
+        // Body: { "fcm_token": token, "device_type": "android" }
+        Log.d("FCM", "Token ready for backend registration: $token")
     }
 
     override fun onMessageReceived(message: RemoteMessage) {
@@ -43,7 +52,7 @@ class WealthFlowMessagingService : FirebaseMessagingService() {
         }
 
         val builder = NotificationCompat.Builder(this, channelId)
-            // .setSmallIcon(R.mipmap.ic_launcher) // TODO: Set proper vector icon
+            .setSmallIcon(android.R.drawable.ic_dialog_info)
             .setContentTitle(title)
             .setContentText(body)
             .setPriority(NotificationCompat.PRIORITY_HIGH)

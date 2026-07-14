@@ -2,9 +2,12 @@ package com.example.data.api
 
 import retrofit2.http.GET
 import retrofit2.http.POST
+import retrofit2.http.PATCH
 import retrofit2.http.Body
 import retrofit2.http.Path
 import retrofit2.http.Header
+import retrofit2.http.Multipart
+import retrofit2.http.Part
 import retrofit2.Response
 import com.squareup.moshi.JsonClass
 
@@ -90,6 +93,29 @@ interface FinanceApiService {
 
     @POST("auth/register/")
     suspend fun register(@Body request: RegisterRequest): LoginResponse
+
+    @POST("auth/logout/")
+    suspend fun logout(@Body refreshToken: Map<String, String>): Response<Map<String, String>>
+
+    @POST("auth/password-reset/")
+    suspend fun requestPasswordReset(@Body email: Map<String, String>): Map<String, String>
+
+    @POST("auth/password-reset-confirm/{uid}/{token}/")
+    suspend fun confirmPasswordReset(
+        @Path("uid") uid: String,
+        @Path("token") token: String,
+        @Body newPassword: Map<String, String>
+    ): Map<String, String>
+
+    @GET("auth/profile/")
+    suspend fun getProfile(): Response<Map<String, @JvmSuppressWildcards Any>>
+
+    @PATCH("auth/profile/")
+    suspend fun updateProfile(@Body updates: Map<String, @JvmSuppressWildcards Any>): Response<Map<String, @JvmSuppressWildcards Any>>
+
+    @Multipart
+    @POST("auth/profile/avatar/")
+    suspend fun uploadAvatar(@Part avatar: okhttp3.MultipartBody.Part): Response<Map<String, String>>
 
     // Ledger (Transactions)
     @GET("ledger/transactions/")
